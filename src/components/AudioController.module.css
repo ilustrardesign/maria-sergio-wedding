@@ -1,0 +1,36 @@
+.audioControl {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: var(--z-controls);
+}
+.audioButton {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border: 1px solid rgb(116 123 85 / 38%);
+  border-radius: 50%;
+  background: rgb(253 251 246 / 90%);
+  box-shadow: var(--shadow-float);
+  color: var(--color-olive-dark);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: transform var(--duration-fast), background var(--duration-fast);
+}
+.audioButton:hover:not(:disabled) { background: var(--color-olive-dark); color: var(--color-warm-white); transform: translateY(-2px); }
+.audioButton:disabled { box-shadow: none; cursor: not-allowed; opacity: 0.48; }
+.equalizer, .equalizerActive {
+  position: absolute;
+  right: 0.32rem;
+  bottom: 0.36rem;
+  display: flex;
+  height: 0.55rem;
+  align-items: end;
+  gap: 1px;
+}
+.equalizer i, .equalizerActive i { display: block; width: 1px; height: 30%; background: currentColor; }
+.equalizerActive i { animation: audio-level 900ms ease-in-out infinite alternate; }
+.equalizerActive i:nth-child(2) { animation-delay: -300ms; }
+.equalizerActive i:nth-child(3) { animation-delay: -600ms; }
+@keyframes audio-level { to { height: 100%; } }

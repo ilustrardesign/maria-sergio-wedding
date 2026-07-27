@@ -1,0 +1,527 @@
+.section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(6.5rem, 11vw, 11rem) var(--gutter);
+  background:
+    radial-gradient(circle at 8% 16%, rgb(255 255 255 / 7%) 0 0.8px, transparent 1px) 0 0 / 29px 31px,
+    radial-gradient(ellipse at 12% 74%, rgb(191 205 184 / 14%), transparent 38%),
+    radial-gradient(ellipse at 93% 12%, rgb(196 177 128 / 10%), transparent 34%),
+    var(--color-olive-dark);
+  color: var(--color-ivory);
+}
+
+.section::before,
+.section::after {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgb(232 222 203 / 12%);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.section::before {
+  top: -15rem;
+  right: -15rem;
+  width: 34rem;
+  height: 34rem;
+}
+
+.section::after {
+  bottom: -20rem;
+  left: -18rem;
+  width: 38rem;
+  height: 38rem;
+}
+
+.backdropWord {
+  position: absolute;
+  top: 1.5rem;
+  right: -0.035em;
+  z-index: -1;
+  color: transparent;
+  font-family: var(--font-display);
+  font-size: clamp(9rem, 25vw, 25rem);
+  font-weight: 400;
+  letter-spacing: -0.08em;
+  line-height: 0.8;
+  opacity: 0.09;
+  -webkit-text-stroke: 1px var(--color-ivory);
+  pointer-events: none;
+  user-select: none;
+}
+
+.inner {
+  display: grid;
+  width: min(100%, var(--max-width));
+  margin-inline: auto;
+  grid-template-columns: minmax(15rem, 0.72fr) minmax(34rem, 1.28fr);
+  gap: clamp(3.5rem, 7vw, 8rem);
+  align-items: start;
+}
+
+.introduction {
+  position: relative;
+  padding-top: clamp(1rem, 4vw, 4rem);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 0 1.25rem;
+  color: var(--color-sand);
+  font-family: var(--font-functional);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  width: 2.5rem;
+  height: 1px;
+  background: var(--color-gold);
+  content: "";
+}
+
+.introduction h2 {
+  margin: 0;
+  color: var(--color-warm-white);
+  font-family: var(--font-display);
+  font-size: clamp(4.6rem, 9vw, 8.5rem);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 0.82;
+}
+
+.introRule {
+  display: block;
+  width: min(8rem, 35%);
+  height: 1px;
+  margin: clamp(2.4rem, 5vw, 4.5rem) 0 2rem;
+  background: linear-gradient(90deg, var(--color-gold), transparent);
+}
+
+.introCopy {
+  max-width: 27rem;
+  color: color-mix(in srgb, var(--color-ivory) 82%, transparent);
+  font-size: var(--text-body-lg);
+  line-height: 1.8;
+  text-wrap: pretty;
+}
+
+.formFrame {
+  position: relative;
+  padding: clamp(0.45rem, 1vw, 0.8rem);
+  border: 1px solid rgb(233 218 183 / 42%);
+}
+
+.formFrame::before {
+  position: absolute;
+  inset: -0.65rem 0.65rem 0.65rem -0.65rem;
+  z-index: -1;
+  border: 1px solid rgb(233 218 183 / 18%);
+  content: "";
+  pointer-events: none;
+}
+
+.form {
+  position: relative;
+  padding: clamp(2rem, 5vw, 4.5rem);
+  background:
+    radial-gradient(circle at 15% 12%, rgb(104 97 70 / 3.2%) 0 0.7px, transparent 1px) 0 0 / 25px 27px,
+    linear-gradient(145deg, var(--color-warm-white), var(--color-ivory));
+  box-shadow: var(--shadow-paper);
+  color: var(--color-charcoal);
+}
+
+.formOrnament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-bottom: clamp(2.3rem, 5vw, 3.5rem);
+}
+
+.formOrnament::before,
+.formOrnament::after {
+  width: min(6rem, 25%);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold));
+  content: "";
+}
+
+.formOrnament::after {
+  background: linear-gradient(90deg, var(--color-gold), transparent);
+}
+
+.formOrnament span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 1px solid var(--color-gold);
+  transform: rotate(45deg);
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.6rem clamp(1.25rem, 3vw, 2.4rem);
+}
+
+.field {
+  min-width: 0;
+}
+
+.field label,
+.attendanceFieldset legend {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: var(--color-olive-dark);
+  font-family: var(--font-functional);
+  font-size: 0.73rem;
+  font-weight: 650;
+  letter-spacing: 0.115em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.requiredMark {
+  margin-left: 0.3em;
+  color: var(--color-error);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  min-height: 3.25rem;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 32%, transparent);
+  border-radius: 0;
+  background: rgb(255 255 255 / 38%);
+  color: var(--color-charcoal);
+  font-family: var(--font-functional);
+  font-size: 1rem;
+  line-height: 1.45;
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease;
+}
+
+.field input {
+  padding: 0.72rem 0.85rem;
+}
+
+.field textarea {
+  min-height: 8.5rem;
+  padding: 0.85rem;
+  resize: vertical;
+}
+
+.field input:hover,
+.field textarea:hover {
+  border-color: var(--color-olive);
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: var(--color-olive-dark);
+  outline: none;
+  background: var(--color-warm-white);
+  box-shadow: 0 0 0 3px rgb(116 123 85 / 16%);
+}
+
+.field input[aria-invalid="true"],
+.field textarea[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.field input:disabled {
+  border-color: rgb(109 106 97 / 18%);
+  background: rgb(109 106 97 / 5%);
+  color: color-mix(in srgb, var(--color-warm-gray) 65%, transparent);
+  cursor: not-allowed;
+}
+
+.attendanceFieldset {
+  min-width: 0;
+  margin: 2rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.attendanceOptions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.radioOption {
+  display: flex;
+  min-height: 3.55rem;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 28%, transparent);
+  background: rgb(255 255 255 / 30%);
+  color: var(--color-charcoal);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.radioOption:hover {
+  border-color: var(--color-olive);
+  background: rgb(255 255 255 / 58%);
+}
+
+.radioOption:has(input:checked) {
+  border-color: var(--color-olive-dark);
+  background: color-mix(in srgb, var(--color-sage) 27%, var(--color-warm-white));
+}
+
+.radioOption:has(input:focus-visible) {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+.radioOption input {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--color-olive-dark);
+}
+
+.radioOption span {
+  font-family: var(--font-reading);
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.guestField input {
+  max-width: 9rem;
+}
+
+.messageField {
+  margin-top: 1.6rem;
+}
+
+.fieldError {
+  margin: 0.45rem 0 0;
+  color: var(--color-error);
+  font-family: var(--font-functional);
+  font-size: 0.78rem;
+  font-weight: 550;
+  line-height: 1.45;
+}
+
+.actionRow {
+  display: grid;
+  margin-top: clamp(2rem, 5vw, 3.2rem);
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem 1.4rem;
+  align-items: center;
+}
+
+.submitButton {
+  display: inline-flex;
+  min-height: 3.4rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.4rem;
+  border: 1px solid var(--color-olive-dark);
+  border-radius: var(--radius-pill);
+  background: var(--color-olive-dark);
+  color: var(--color-warm-white);
+  font-family: var(--font-functional);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.145em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  border-color: var(--color-olive);
+  background: var(--color-olive);
+  transform: translateY(-2px);
+}
+
+.submitButton:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.buttonMark {
+  width: 0.42rem;
+  height: 0.42rem;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.submitButton:disabled .buttonMark {
+  animation: rsvpPulse 1s ease-in-out infinite alternate;
+}
+
+.status {
+  min-height: 2.8rem;
+  margin: 0;
+  align-content: center;
+  color: var(--color-warm-gray);
+  font-family: var(--font-functional);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.status:empty {
+  min-height: 0;
+}
+
+.status.loading {
+  color: var(--color-olive);
+}
+
+.status.demo {
+  color: color-mix(in srgb, var(--color-gold) 76%, var(--color-charcoal));
+}
+
+.status.success {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.status.error {
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+@keyframes rsvpPulse {
+  from { opacity: 0.45; transform: rotate(45deg) scale(0.78); }
+  to { opacity: 1; transform: rotate(45deg) scale(1.1); }
+}
+
+@media (max-width: 62rem) {
+  .inner {
+    grid-template-columns: 1fr;
+    gap: 3.5rem;
+  }
+
+  .introduction {
+    max-width: 39rem;
+    padding-top: 0;
+  }
+
+  .introduction h2 {
+    font-size: clamp(4.5rem, 16vw, 7rem);
+  }
+
+  .introRule {
+    margin-block: 2.4rem 1.5rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .section {
+    padding: clamp(5.5rem, 19vw, 7.5rem) var(--gutter);
+  }
+
+  .backdropWord {
+    top: 1rem;
+    font-size: 42vw;
+  }
+
+  .inner {
+    gap: 2.75rem;
+  }
+
+  .formFrame {
+    margin-inline: -0.35rem;
+    padding: 0.35rem;
+  }
+
+  .formFrame::before {
+    inset: -0.35rem 0.35rem 0.35rem -0.35rem;
+  }
+
+  .form {
+    padding: 2rem 1.15rem 2.25rem;
+  }
+
+  .fieldGrid,
+  .attendanceOptions,
+  .actionRow {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldGrid {
+    gap: 1.35rem;
+  }
+
+  .attendanceOptions {
+    gap: 0.65rem;
+  }
+
+  .guestField input {
+    max-width: 100%;
+  }
+
+  .submitButton {
+    width: 100%;
+    min-height: 3.55rem;
+  }
+
+  .status {
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .submitButton,
+  .field input,
+  .field textarea,
+  .radioOption {
+    transition: none;
+  }
+
+  .submitButton:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .submitButton:disabled .buttonMark {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .section,
+  .form {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .introduction h2,
+  .introCopy,
+  .eyebrow {
+    color: CanvasText;
+  }
+
+  .formFrame,
+  .formFrame::before,
+  .field input,
+  .field textarea,
+  .radioOption,
+  .submitButton {
+    border-color: CanvasText;
+  }
+}
