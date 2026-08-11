@@ -16,3 +16,8 @@ Thumbs.db
 .vercel
 
 .pnpm-store/
+
+# Archivos locales de trabajo
+excalidraw.log
+por.traineddata
+Fotos Extraídas de la Página Web/

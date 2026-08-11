@@ -22,6 +22,19 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
           )}
         </div>
       </div>
+      {gifts.items.length > 0 ? (
+        <div className={["section-inner", styles.giftListWrap].join(" ")}>
+          <ol className={styles.giftList} data-reveal>
+            {gifts.items.map((item, index) => (
+              <li className={styles.giftItem} key={item.id}>
+                <span className={styles.giftNumber}>{String(index + 1).padStart(2, "0")}</span>
+                <p>{item.title}</p>
+                <strong>{item.price}</strong>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
     </section>
   );
 }

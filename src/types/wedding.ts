@@ -20,6 +20,11 @@ export interface WeddingDateConfig {
   receptionTime: EditableField<string>;
 }
 export interface ImageAsset { src: string; alt: string; width: number; height: number; status: ContentStatus; }
+export interface PhotoTreatment {
+  desktopPosition: string;
+  mobilePosition: string;
+  overlay?: "ivory" | "olive" | "none";
+}
 export interface AudioConfig { enabled: boolean; src: string; title: string; missingMessage: string; }
 export interface MetadataConfig { title: string; description: string; canonicalUrl: EditableField<string>; openGraphImage: string; themeColor: string; }
 export interface NavigationItem { label: string; href: string; }
@@ -46,6 +51,7 @@ export interface StoryChapter {
   body: EditableField<string>;
   image: EditableField<string>;
   imageAlt: string;
+  imageTreatment?: PhotoTreatment;
   caption: EditableField<string>;
   alignment: StoryAlignment;
 }
@@ -85,6 +91,7 @@ export interface GalleryItem {
   alt: string;
   caption: EditableField<string>;
   aspectRatio: GalleryAspectRatio;
+  treatment?: PhotoTreatment;
 }
 export interface GalleryConfig { eyebrow: string; title: string; introduction: EditableField<string>; items: GalleryItem[]; }
 export interface RsvpFieldLabels {
@@ -124,12 +131,18 @@ export interface RsvpConfig {
 }
 export interface GiftStore { id: string; name: string; url: EditableField<string>; }
 export interface GiftPlatform { name: string; url: string; }
+export interface GiftItem {
+  id: string;
+  title: string;
+  price: string;
+}
 export interface GiftsConfig {
   eyebrow: string;
   title: string;
   message: EditableField<string>;
   platform: EditableField<GiftPlatform>;
   stores: GiftStore[];
+  items: GiftItem[];
   pendingMessage: string;
 }
 export interface TravelConfig {
@@ -180,7 +193,7 @@ export interface WeddingContent {
   couple: CoupleConfig;
   date: WeddingDateConfig;
   metadata: MetadataConfig;
-  assets: { monogram: ImageAsset; saveTheDate: ImageAsset; };
+  assets: { monogram: ImageAsset; saveTheDate: ImageAsset; heroPhoto: ImageAsset; };
   audio: AudioConfig;
   navigation: NavigationItem[];
   opening: OpeningCopy;
