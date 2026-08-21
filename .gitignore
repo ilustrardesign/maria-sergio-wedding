@@ -21,3 +21,15 @@ Thumbs.db
 excalidraw.log
 por.traineddata
 Fotos Extraídas de la Página Web/
+
+# QA / artefactos temporales
+artifacts/screenshots/
+artifacts/gift-scrape/
+
+# Imágenes fuente de trabajo; las versiones usadas por la web viven en public/
+FotoparaPortada.jpeg
+FotoparaPortada - copia.jpeg
+Imagen Horizontal.png
+Imagen Vertical.png
+Imagen Slide Pagina Web.png
+artifacts/scripts/

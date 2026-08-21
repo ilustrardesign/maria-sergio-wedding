@@ -21,7 +21,7 @@ const validationOrder: FieldName[] = [
   "phone",
   "email",
   "attendance",
-  "guests",
+  "guestNames",
 ];
 
 const fieldErrorId = (field: FieldName) => `rsvp-${field}-error`;
@@ -50,11 +50,6 @@ export function RsvpSection({ content }: RsvpSectionProps) {
   const [statusMessage, setStatusMessage] = useState("");
 
   const mode = resolveMode(rsvp.defaultMode);
-  const endpoint = process.env.NEXT_PUBLIC_RSVP_ENDPOINT?.trim();
-  const maximumGuests =
-    rsvp.maxGuests.status === "confirmed" && rsvp.maxGuests.value !== null
-      ? rsvp.maxGuests.value
-      : undefined;
   const isLoading = submissionState === "loading";
 
   function validate(form: HTMLFormElement) {
@@ -64,9 +59,8 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     const phone = String(formData.get("phone") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const attendanceValue = formData.get("attendance");
-    const dietaryRestrictions = String(formData.get("dietaryRestrictions") ?? "").trim();
+    const guestNames = String(formData.get("guestNames") ?? "").trim();
     const message = String(formData.get("message") ?? "").trim();
-    const guestsValue = attendanceValue === "yes" ? Number(formData.get("guests")) : 0;
     const nextErrors: FieldErrors = {};
 
     if (!firstName) nextErrors.firstName = rsvp.messages.required;
@@ -88,13 +82,8 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       nextErrors.attendance = rsvp.messages.required;
     }
 
-    if (
-      attendanceValue === "yes" &&
-      (!Number.isInteger(guestsValue) ||
-        guestsValue < 1 ||
-        (maximumGuests !== undefined && guestsValue > maximumGuests))
-    ) {
-      nextErrors.guests = rsvp.messages.invalidGuestCount;
+    if (attendanceValue === "yes" && !guestNames) {
+      nextErrors.guestNames = rsvp.messages.required;
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -105,10 +94,9 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       errors: nextErrors,
       payload: {
         attendance: attendanceValue as RsvpPayload["attendance"],
-        dietaryRestrictions,
         email,
         firstName,
-        guests: guestsValue,
+        guestNames,
         lastName,
         message,
         phone,
@@ -142,9 +130,9 @@ export function RsvpSection({ content }: RsvpSectionProps) {
 
     if (target.name === "attendance" && target.value === "no") {
       setErrors((current) => {
-        if (!current.guests) return current;
+        if (!current.guestNames) return current;
         const next = { ...current };
-        delete next.guests;
+        delete next.guestNames;
         return next;
       });
     }
@@ -172,20 +160,11 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       return;
     }
 
-    if (mode === "endpoint" && !endpoint) {
-      setSubmissionState("error");
-      setStatusMessage(rsvp.messages.endpointMissing);
-      return;
-    }
-
     setSubmissionState("loading");
     setStatusMessage(rsvp.labels.submitting);
 
     try {
-      const submission = await submitRsvp(
-        result.payload,
-        mode === "endpoint" ? endpoint : "",
-      );
+      const submission = await submitRsvp(result.payload, mode === "endpoint" ? "/api/rsvp" : "");
 
       if (submission.mode === "demo") {
         setSubmissionState("demo");
@@ -344,38 +323,25 @@ export function RsvpSection({ content }: RsvpSectionProps) {
             </fieldset>
 
             <div className={styles.fieldGrid}>
-              <div className={[styles.field, styles.guestField].join(" ")}>
-                <label htmlFor="rsvp-guests">
-                  {rsvp.labels.guestCount}
+              <div className={[styles.field, styles.messageField].join(" ")}>
+                <label htmlFor="rsvp-guest-names">
+                  {rsvp.labels.guestNames}
                   {attendance === "yes" ? (
                     <span aria-hidden="true" className={styles.requiredMark}>*</span>
                   ) : null}
                 </label>
-                <input
-                  aria-describedby={errors.guests ? fieldErrorId("guests") : undefined}
-                  aria-invalid={Boolean(errors.guests)}
-                  defaultValue="1"
+                <textarea
+                  aria-describedby={errors.guestNames ? fieldErrorId("guestNames") : "rsvp-guest-names-help"}
+                  aria-invalid={Boolean(errors.guestNames)}
                   disabled={attendance !== "yes"}
-                  id="rsvp-guests"
-                  inputMode="numeric"
-                  max={maximumGuests}
-                  min="1"
-                  name="guests"
+                  id="rsvp-guest-names"
+                  maxLength={500}
+                  name="guestNames"
                   required={attendance === "yes"}
-                  step="1"
-                  type="number"
+                  rows={3}
                 />
-                <FieldError field="guests" message={errors.guests} />
-              </div>
-
-              <div className={styles.field}>
-                <label htmlFor="rsvp-dietary">{rsvp.labels.dietaryRestrictions}</label>
-                <input
-                  id="rsvp-dietary"
-                  maxLength={240}
-                  name="dietaryRestrictions"
-                  type="text"
-                />
+                <p className={styles.fieldHint} id="rsvp-guest-names-help">{rsvp.labels.guestNamesHelp}</p>
+                <FieldError field="guestNames" message={errors.guestNames} />
               </div>
             </div>
 

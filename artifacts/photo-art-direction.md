@@ -4,7 +4,8 @@ Todas las fotografías usadas provienen de `Fotos Extraídas de la Página Web/F
 
 | Sección | Foto seleccionada | Origen | Función narrativa | Orientación original | Tratamiento | Object-position desktop | Object-position mobile | Overlay | Derivado |
 |---|---|---|---|---|---|---|---|---|---|
-| Hero | `hero-embrace-architecture.jpg` | `09 - MARIA&SERGIO_104.jpg` | Primera impresión romántica e inmediata: abraço íntimo, fachada marfil y vegetación que conectan con la identidad sin hacer protagonista la papelería. | Vertical 2:3 | Full-bleed con `next/image`, gradiente marfil/oliva en desktop y viñeta inferior en mobile | `42% 35%` | `46% 24%` | Gradiente marfil lateral + oliva sutil; mobile con degradado inferior oscuro | No |
+| Hero desktop / landscape | `hero-desktop.png` | `Imagen Horizontal.png` | Primera impresión emocional con crop horizontal preparado manualmente: texto en área izquierda y Maria & Sérgio como foco romántico en el campo derecho/central. | Horizontal 16:9 | `<picture>` con `getImageProps`; asset elegido por `media="(orientation: landscape), (min-aspect-ratio: 1/1)"`; `object-fit: cover` sin zoom agresivo | `center` | N/A | Gradiente marfil mínimo lateral + viñeta inferior muy suave para legibilidad, elegido porque conserva más fotografía que el tratamiento fuerte anterior | No |
+| Hero mobile / portrait | `hero-mobile.png` | `Imagen Vertical.png` | Mantiene la composición mobile que ya funcionaba: beso protagonista, nombre con presencia y lectura sobre overlay inferior. | Vertical portrait | Fallback del `<picture>` para portrait; asset preparado específicamente para teléfono y tablet portrait | N/A | `51% 32%` | Overlay inferior oscuro/oliva ya calibrado para lectura mobile | No |
 | Nossa História 01 | `story-staircase-kiss.jpg` | `01 - MARIA&SERGIO_74.jpg` | Apertura ceremonial e íntima; la escalera aporta solemnidad sin reemplazar el hero de papelería. | Vertical 2:3 | `next/image`, crop CSS, marco editorial | `50% 22%` | `50% 20%` | Marfil suave | No |
 | Nossa História 02 | `story-palace-walk.jpg` | `12 - MARIA&SERGIO_12.jpg` | Movimiento y arquitectura clásica; funciona como capítulo de transición. | Vertical 2:3 | `next/image`, crop CSS | `50% 20%` | `50% 18%` | Ninguno | No |
 | Nossa História 03 | `story-balcony-quiet.jpg` | `22 - MARIA&SERGIO_6.jpg` | Cierre contemplativo e íntimo antes de volver a secciones informativas. | Vertical 2:3 | `next/image`, crop CSS | `50% 18%` | `50% 16%` | Oliva suave | No |
@@ -18,6 +19,8 @@ Todas las fotografías usadas provienen de `Fotos Extraídas de la Página Web/F
 ## Reemplazo futuro
 
 Cuando lleguen los archivos finales del fotógrafo, sustituir los JPG de `public/images/wedding/preview/` conservando nombres y proporciones de uso. Si las composiciones finales tienen más aire o diferente encuadre, ajustar solo `imageTreatment`/`treatment` en `src/content/wedding.ts`.
+
+Para el hero actual, sustituir `public/images/wedding/hero/hero-desktop.png` y `public/images/wedding/hero/hero-mobile.png` por versiones finales equivalentes. La selección responsive se hace en HTML con `<picture>` + `getImageProps`, evitando descargar simultáneamente los dos assets grandes. Tablet portrait usa la versión vertical; tablet landscape, laptop, desktop y ultrawide usan la horizontal.
 
 ## Descartes relevantes
 

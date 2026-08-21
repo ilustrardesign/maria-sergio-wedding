@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-labelledby="title desc">
+  <title id="title">Envelope de presente para valor livre</title>
+  <desc id="desc">Composição editorial com envelope, cartão e folhagem em tons de marfim, dourado e verde oliva.</desc>
+  <rect width="600" height="600" fill="#f7f0e4"/>
+  <path d="M94 436c58-111 126-167 204-167 92 0 147 73 210 80 33 4 57-10 72-28v279H0V488c24-4 56-20 94-52Z" fill="#edf2e9"/>
+  <g transform="translate(116 142)">
+    <rect x="30" y="96" width="340" height="222" rx="14" fill="#fbf8f0" stroke="#b49a61" stroke-width="3"/>
+    <path d="M42 113 198 238 357 113" fill="none" stroke="#b49a61" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M42 302 166 204M357 302 235 204" fill="none" stroke="#d5c392" stroke-width="2" stroke-linecap="round"/>
+    <rect x="122" y="28" width="206" height="148" rx="12" fill="#fffdf8" stroke="#747b55" stroke-width="2"/>
+    <path d="M163 87h122M163 116h84" stroke="#747b55" stroke-width="8" stroke-linecap="round"/>
+    <path d="M58 80c-18-40-8-70 31-89M76 100c-29-29-60-32-94-8M340 47c34-24 68-20 101 14M335 70c43-7 73 8 90 45" fill="none" stroke="#747b55" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="400" cy="64" r="10" fill="#fff"/>
+    <circle cx="35" cy="81" r="9" fill="#fff"/>
+    <circle cx="372" cy="105" r="7" fill="#fff"/>
+  </g>
+</svg>

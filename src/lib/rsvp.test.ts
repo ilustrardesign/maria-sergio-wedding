@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { isValidPayload } from "../app/api/rsvp/route";
 import { submitRsvp, type RsvpPayload } from "./rsvp";
 
 const payload: RsvpPayload = {
   attendance: "yes",
-  dietaryRestrictions: "",
   email: "maria@example.com",
   firstName: "Maria",
-  guests: 1,
+  guestNames: "Maria Silva, João Silva",
   lastName: "Silva",
   message: "",
   phone: "+55 83 99999-9999",
@@ -33,5 +33,15 @@ describe("submitRsvp", () => {
   it("propaga uma mensagem segura quando o endpoint falha", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
     await expect(submitRsvp(payload, "https://example.test/rsvp")).rejects.toThrow(/Não foi possível/);
+  });
+});
+
+describe("isValidPayload", () => {
+  it("permite RSVP negativo sem nomes dos convidados", () => {
+    expect(isValidPayload({ ...payload, attendance: "no", guestNames: "" })).toBe(true);
+  });
+
+  it("exige nomes dos convidados quando a presença é confirmada", () => {
+    expect(isValidPayload({ ...payload, attendance: "yes", guestNames: "" })).toBe(false);
   });
 });

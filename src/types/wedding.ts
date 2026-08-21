@@ -99,11 +99,11 @@ export interface RsvpFieldLabels {
   lastName: string;
   phone: string;
   email: string;
-  guestCount: string;
+  guestNames: string;
+  guestNamesHelp: string;
   attendance: string;
   attendanceYes: string;
   attendanceNo: string;
-  dietaryRestrictions: string;
   message: string;
   submit: string;
   submitting: string;
@@ -112,7 +112,6 @@ export interface RsvpMessages {
   required: string;
   invalidEmail: string;
   invalidPhone: string;
-  invalidGuestCount: string;
   demo: string;
   success: string;
   endpointMissing: string;
@@ -123,7 +122,6 @@ export interface RsvpConfig {
   title: string;
   introduction: string;
   modeEnvironmentVariable: "NEXT_PUBLIC_RSVP_MODE";
-  endpointEnvironmentVariable: "NEXT_PUBLIC_RSVP_ENDPOINT";
   defaultMode: RsvpMode;
   maxGuests: EditableField<number>;
   labels: RsvpFieldLabels;
@@ -135,6 +133,12 @@ export interface GiftItem {
   id: string;
   title: string;
   price: string;
+  image: ImageAsset;
+  paymentLabel: string;
+  customAmount?: boolean;
+  description?: string;
+  imageFit?: "cover" | "contain";
+  imagePosition?: string;
 }
 export interface GiftsConfig {
   eyebrow: string;
@@ -171,8 +175,6 @@ export interface ClosingConfig {
   names: string;
   date: string;
   calendar: CalendarConfig;
-  shareLabel: string;
-  copyLinkSuccess: string;
   backToTopLabel: string;
 }
 export interface PersonalizationConfig {
@@ -193,7 +195,13 @@ export interface WeddingContent {
   couple: CoupleConfig;
   date: WeddingDateConfig;
   metadata: MetadataConfig;
-  assets: { monogram: ImageAsset; saveTheDate: ImageAsset; heroPhoto: ImageAsset; };
+  assets: {
+    monogram: ImageAsset;
+    saveTheDate: ImageAsset;
+    heroPhoto: ImageAsset;
+    heroPhotoDesktop: ImageAsset;
+    heroPhotoMobile: ImageAsset;
+  };
   audio: AudioConfig;
   navigation: NavigationItem[];
   opening: OpeningCopy;

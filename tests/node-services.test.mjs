@@ -52,10 +52,9 @@ describe("personalização futura", () => {
 describe("serviço RSVP", () => {
   const payload = {
     attendance: "yes",
-    dietaryRestrictions: "",
     email: "maria@example.com",
     firstName: "Maria",
-    guests: 1,
+    guestNames: "Maria Silva, João Silva",
     lastName: "Silva",
     message: "",
     phone: "+55 83 99999-9999",

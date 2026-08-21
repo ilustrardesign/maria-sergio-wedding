@@ -1,29 +1,34 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Great_Vibes, Lora } from "next/font/google";
+import localFont from "next/font/local";
 
 import { weddingContent } from "@/content/wedding";
 
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
+const cormorant = localFont({
   display: "swap",
-  subsets: ["latin"],
+  src: [
+    { path: "../assets/fonts/cormorant-garamond-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "../assets/fonts/cormorant-garamond-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "../assets/fonts/cormorant-garamond-latin-600-normal.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-cormorant",
-  weight: ["400", "500", "600"],
 });
 
-const lora = Lora({
+const lora = localFont({
   display: "swap",
-  subsets: ["latin"],
+  src: [
+    { path: "../assets/fonts/lora-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "../assets/fonts/lora-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "../assets/fonts/lora-latin-600-normal.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-lora",
-  weight: ["400", "500", "600"],
 });
 
-const script = Great_Vibes({
+const script = localFont({
   display: "swap",
-  subsets: ["latin"],
+  src: [{ path: "../assets/fonts/great-vibes-latin-400-normal.woff2", weight: "400", style: "normal" }],
   variable: "--font-script-face",
-  weight: "400",
 });
 
 const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -63,8 +68,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR">
-      <body className={[cormorant.variable, lora.variable, script.variable].join(" ")}>{children}</body>
+    <html className={[cormorant.variable, lora.variable, script.variable].join(" ")} lang="pt-BR">
+      <body>{children}</body>
     </html>
   );
 }

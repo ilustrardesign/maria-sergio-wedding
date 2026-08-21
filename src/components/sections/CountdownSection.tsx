@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { BotanicalDivider } from "@/components/ui/Botanical";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { getCountdown, type CountdownValue } from "@/lib/countdown";
 import type { WeddingContent } from "@/types/wedding";
@@ -51,7 +52,7 @@ export function CountdownSection({ content }: CountdownSectionProps) {
             ))}
           </div>
         )}
-        <p className={styles.timeZoneNote}>Contagem baseada no fuso de Cabedelo, Paraíba.</p>
+        <BotanicalDivider className={styles.countdownBotanical} />
       </div>
     </section>
   );

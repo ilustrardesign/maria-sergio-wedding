@@ -8,15 +8,19 @@ import styles from "./EditorialSections.module.css";
 
 type VenuesSectionProps = { venues: VenueConfig[] };
 
-function FieldValue({ value, placeholder }: { value: string | null; placeholder: string }) {
-  return <span className={value ? undefined : styles.pendingValue}>{value ?? placeholder}</span>;
+function FieldValue({ value }: { value: string }) {
+  return <span>{value}</span>;
 }
 
 export function VenuesSection({ venues }: VenuesSectionProps) {
   return (
     <section aria-labelledby="venues-title" className={["section", styles.venuesSection].join(" ")} id="celebracao">
       <div className="section-inner">
-        <SectionHeading eyebrow="Celebração" title="Do altar ao brinde" description="Dois cenários conectados pela mesma paisagem, aguardando os últimos detalhes práticos." />
+        <SectionHeading
+          eyebrow="CELEBRAÇÃO"
+          title="Cerimônia e recepção"
+          description="Confira os locais escolhidos para compartilharmos cada momento deste dia com você."
+        />
         <h2 className="sr-only" id="venues-title">Locais da cerimônia e recepção</h2>
         <div className={styles.venueGrid}>
           {venues.map((venue, index) => {
@@ -32,7 +36,7 @@ export function VenuesSection({ venues }: VenuesSectionProps) {
                       src={venue.illustration.value}
                     />
                   ) : (
-                    <><span aria-hidden="true" className={styles.venueArch} /><span className={styles.placeholderTag}>{venue.illustration.placeholder}</span></>
+                    <span aria-hidden="true" className={styles.venueArch} />
                   )}
                   <span className={styles.venueNumber}>{String(index + 1).padStart(2, "0")}</span>
                 </div>
@@ -40,16 +44,16 @@ export function VenuesSection({ venues }: VenuesSectionProps) {
                   <p className={styles.venueEyebrow}>{venue.eyebrow}</p>
                   <h3>{venue.name}</h3>
                   <dl>
-                    <div><dt>Horário</dt><dd><FieldValue value={venue.time.value} placeholder={venue.time.placeholder} /></dd></div>
-                    <div><dt>Local</dt><dd><FieldValue value={venue.city.value} placeholder={venue.city.placeholder} />{venue.region.value ? ", " + venue.region.value : ""}</dd></div>
-                    <div><dt>Endereço</dt><dd><FieldValue value={venue.address.value} placeholder={venue.address.placeholder} /></dd></div>
+                    {venue.time.value ? <div><dt>Horário</dt><dd><FieldValue value={venue.time.value} /></dd></div> : null}
+                    {venue.city.value ? <div><dt>Local</dt><dd><FieldValue value={venue.city.value} />{venue.region.value ? ", " + venue.region.value : ""}</dd></div> : null}
+                    {venue.address.value ? <div><dt>Endereço</dt><dd><FieldValue value={venue.address.value} /></dd></div> : null}
                   </dl>
+                  {venue.note.value ? <p className={styles.venueNote}>{venue.note.value}</p> : null}
                   {hasRoute ? (
                     <a className="button" href={venue.directionsUrl.value ?? undefined} rel="noreferrer" target="_blank"><Icon name="pin" size={18} />{venue.directionsLabel}</a>
                   ) : (
-                    <button aria-describedby={venue.id + "-route-note"} className="button" disabled type="button"><Icon name="pin" size={18} />{venue.directionsLabel}</button>
+                    <button className="button" disabled type="button"><Icon name="pin" size={18} />{venue.directionsLabel}</button>
                   )}
-                  {!hasRoute ? <small id={venue.id + "-route-note"}>Rota aguardando endereço confirmado.</small> : null}
                 </div>
               </article>
             );

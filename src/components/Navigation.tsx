@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/ui/Icon";
-import { Monogram } from "@/components/ui/Monogram";
 import type { WeddingContent } from "@/types/wedding";
 
 import styles from "./Navigation.module.css";
@@ -129,20 +128,11 @@ export function Navigation({ content }: NavigationProps) {
   return (
     <>
       <header className={[styles.navigation, scrolled || menuOpen ? styles.navigationVisible : ""].filter(Boolean).join(" ")}>
-        <div aria-hidden="true" className={styles.progressTrack}>
+        <div aria-hidden="true" className={[styles.progressTrack, scrolled ? styles.progressTrackVisible : ""].filter(Boolean).join(" ")}>
           <span style={{ transform: "scaleX(" + progress + ")" }} />
         </div>
 
         <div className={styles.bar}>
-          <a
-            aria-label={"Ir ao início — " + content.couple.displayName}
-            className={styles.brand}
-            href="#inicio"
-            onClick={closeMenu}
-          >
-            <Monogram label="" src={content.assets.monogram.src} />
-          </a>
-
           <nav aria-label="Navegação principal" className={styles.desktopNav}>
             <ul>
               {content.navigation.map((item) => (

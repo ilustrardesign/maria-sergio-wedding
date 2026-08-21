@@ -1,9 +1,8 @@
 export type RsvpPayload = {
   attendance: "yes" | "no";
-  dietaryRestrictions: string;
   email: string;
   firstName: string;
-  guests: number;
+  guestNames: string;
   lastName: string;
   message: string;
   phone: string;
@@ -15,7 +14,7 @@ export type RsvpResult =
 
 export async function submitRsvp(
   payload: RsvpPayload,
-  endpoint = process.env.NEXT_PUBLIC_RSVP_ENDPOINT,
+  endpoint = "/api/rsvp",
 ): Promise<RsvpResult> {
   if (!endpoint) return { mode: "demo", submitted: false };
 

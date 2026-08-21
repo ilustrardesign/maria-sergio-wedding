@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { BotanicalCorner } from "@/components/ui/Botanical";
 import { Icon } from "@/components/ui/Icon";
 import { Monogram } from "@/components/ui/Monogram";
 import { createCalendarFile, createGoogleCalendarUrl } from "@/lib/calendar";
@@ -17,19 +18,6 @@ function nextIsoDate(isoDate: string) {
   const [year, month, day] = isoDate.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day + 1));
   return date.toISOString().slice(0, 10);
-}
-
-function copyWithLegacyFallback(value: string) {
-  const field = document.createElement("textarea");
-  field.value = value;
-  field.readOnly = true;
-  field.style.position = "fixed";
-  field.style.inset = "0 auto auto -9999px";
-  document.body.appendChild(field);
-  field.select();
-  const copied = document.execCommand("copy");
-  field.remove();
-  if (!copied) throw new Error("Clipboard unavailable");
 }
 
 export function ClosingSection({ content }: ClosingSectionProps) {
@@ -63,41 +51,6 @@ export function ClosingSection({ content }: ClosingSectionProps) {
     announce("Arquivo de calendário preparado para download.");
   }
 
-  async function copyInviteUrl(inviteUrl: string) {
-    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(inviteUrl);
-    else copyWithLegacyFallback(inviteUrl);
-    announce(content.closing.copyLinkSuccess);
-  }
-
-  async function shareInvite() {
-    const inviteUrl = window.location.href.split("#")[0];
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: content.metadata.title,
-          text: content.metadata.description,
-          url: inviteUrl,
-        });
-        announce("Convite compartilhado.");
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      }
-    }
-
-    try {
-      await copyInviteUrl(inviteUrl);
-    } catch {
-      try {
-        copyWithLegacyFallback(inviteUrl);
-        announce(content.closing.copyLinkSuccess);
-      } catch {
-        announce("Não foi possível copiar o link. Copie o endereço exibido no navegador.");
-      }
-    }
-  }
-
   function scrollToTop() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
@@ -107,8 +60,8 @@ export function ClosingSection({ content }: ClosingSectionProps) {
     <section aria-labelledby="closing-title" className={["section", styles.closing].join(" ")} id="encerramento">
       <span aria-hidden="true" className={styles.skyWash} />
       <span aria-hidden="true" className={styles.horizon} />
-      <span aria-hidden="true" className={styles.botanicalLeft} />
-      <span aria-hidden="true" className={styles.botanicalRight} />
+      <BotanicalCorner className={styles.botanicalLeft} />
+      <BotanicalCorner className={styles.botanicalRight} />
 
       <div className={["section-inner", styles.closingInner].join(" ")}>
         <Monogram className={styles.monogram} src={content.assets.monogram.src} />
@@ -117,7 +70,7 @@ export function ClosingSection({ content }: ClosingSectionProps) {
         <p className={styles.names}>{content.closing.names}</p>
         <time className={styles.date} dateTime={content.date.isoDate}>{content.closing.date}</time>
 
-        <div aria-label="Calendário e compartilhamento" className={styles.actions} role="group">
+        <div aria-label="Calendário" className={styles.actions} role="group">
           <button
             className={["button", styles.action, styles.actionPrimary].join(" ")}
             onClick={downloadCalendarFile}
@@ -137,15 +90,6 @@ export function ClosingSection({ content }: ClosingSectionProps) {
             <Icon name="calendar" size={18} />
             Google Calendar
           </a>
-
-          <button
-            className={["button", styles.action].join(" ")}
-            onClick={() => void shareInvite()}
-            type="button"
-          >
-            <Icon name="share" size={18} />
-            {content.closing.shareLabel}
-          </button>
         </div>
 
         <button className={styles.backLink} onClick={scrollToTop} type="button">

@@ -320,6 +320,14 @@
   line-height: 1.45;
 }
 
+.fieldHint {
+  margin: 0.45rem 0 0;
+  color: var(--color-warm-gray);
+  font-family: var(--font-functional);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .actionRow {
   display: grid;
   margin-top: clamp(2rem, 5vw, 3.2rem);
