@@ -33,3 +33,6 @@ Imagen Horizontal.png
 Imagen Vertical.png
 Imagen Slide Pagina Web.png
 artifacts/scripts/
+
+# Next.js generated types
+next-env.d.ts
