@@ -43,14 +43,14 @@ export const weddingContent = {
       status: "confirmed",
     },
     heroPhotoDesktop: {
-      src: "/images/wedding/hero/hero-desktop.avif",
+      src: "/images/wedding/hero/hero-desktop.webp",
       alt: "Maria e Sérgio se beijam diante de uma fachada branca, vestidos em tons claros.",
       width: 2560,
       height: 1429,
       status: "confirmed",
     },
     heroPhotoMobile: {
-      src: "/images/wedding/hero/hero-mobile.avif",
+      src: "/images/wedding/hero/hero-mobile.webp",
       alt: "Maria e Sérgio se beijam diante de uma fachada branca, vestidos em tons claros.",
       width: 1440,
       height: 1920,
@@ -58,10 +58,10 @@ export const weddingContent = {
     },
   },
   audio: {
-    enabled: Boolean(process.env.NEXT_PUBLIC_MUSIC_SPOTIFY_URL?.trim()),
+    enabled: true,
     src: "/audio/maria-e-sergio-theme.mp3",
-    spotifyUrl: process.env.NEXT_PUBLIC_MUSIC_SPOTIFY_URL?.trim() ?? "",
-    title: "Trilha de Maria e Sérgio",
+    spotifyUrl: "https://open.spotify.com/embed/track/6c6brFif6MTMSq0sVwgMAT?utm_source=generator&theme=0&si=e4289c78d01342fd",
+    title: "Beija Flor — João Gomes",
     missingMessage: "A trilha será adicionada em breve.",
   },
   navigation: [

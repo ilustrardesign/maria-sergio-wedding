@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
 const originalEnv = process.env;
+const fakeEvpKey = "00000000-0000-4000-8000-000000000000";
 
 function request(body: unknown) {
   return new Request("http://localhost/api/pix/charges", {
@@ -19,7 +20,7 @@ describe("POST /api/pix/charges", () => {
   });
 
   it("usa PIX_KEY genérica, preço do catálogo para presente fixo e ignora valor do client", async () => {
-    process.env = { ...originalEnv, PIX_KEY: "evp-aleatoria-123e4567-e89b-12d3-a456-426614174000", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+    process.env = { ...originalEnv, PIX_KEY: fakeEvpKey, PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
     const response = await POST(request({ amount: "1.00", giftId: "lava-seca" }));
     const json = await response.json();
     expect(response.ok).toBe(true);
@@ -30,7 +31,7 @@ describe("POST /api/pix/charges", () => {
   });
 
   it("aceita valor livre válido", async () => {
-    process.env = { ...originalEnv, PIX_KEY: "evp-aleatoria-123e4567-e89b-12d3-a456-426614174000", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+    process.env = { ...originalEnv, PIX_KEY: fakeEvpKey, PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
     const response = await POST(request({ amount: "150.00", giftId: "valor-livre" }));
     const json = await response.json();
     expect(response.ok).toBe(true);
@@ -39,8 +40,18 @@ describe("POST /api/pix/charges", () => {
     expect(json.qrCode).toMatch(/^data:image\/png;base64,/);
   });
 
+  it("aceita EVP UUID aleatória em PIX_KEY sem expor a chave separadamente", async () => {
+    process.env = { ...originalEnv, PIX_KEY: fakeEvpKey, PIX_RECEIVER_NAME: "Maria Auxiliadora Pereira", PIX_RECEIVER_CITY: "SAO PAULO" };
+    const response = await POST(request({ giftId: "buffet" }));
+    const json = await response.json();
+    expect(response.ok).toBe(true);
+    expect(json.pixCopyPaste).toContain(fakeEvpKey);
+    expect(json).not.toHaveProperty("PIX_KEY");
+    expect(json).not.toHaveProperty("pixKey");
+  });
+
   it("recusa valor livre inválido", async () => {
-    process.env = { ...originalEnv, PIX_KEY: "evp-aleatoria-123e4567-e89b-12d3-a456-426614174000", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+    process.env = { ...originalEnv, PIX_KEY: fakeEvpKey, PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
     const response = await POST(request({ amount: "-10", giftId: "valor-livre" }));
     expect(response.status).toBe(400);
   });
@@ -54,7 +65,7 @@ describe("POST /api/pix/charges", () => {
   });
 
   it("não retorna status paid", async () => {
-    process.env = { ...originalEnv, PIX_KEY: "evp-aleatoria-123e4567-e89b-12d3-a456-426614174000", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+    process.env = { ...originalEnv, PIX_KEY: fakeEvpKey, PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
     const response = await POST(request({ giftId: "buffet" }));
     const json = await response.json();
     expect(JSON.stringify(json)).not.toContain("paid");
