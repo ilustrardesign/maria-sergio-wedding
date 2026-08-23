@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   }
 
   const pixConfig = {
-    key: process.env.PIX_KEY_CPF?.trim(),
+    key: process.env.PIX_KEY?.trim() || process.env.PIX_KEY_CPF?.trim(),
     receiverCity: process.env.PIX_RECEIVER_CITY?.trim(),
     receiverName: process.env.PIX_RECEIVER_NAME?.trim(),
   };

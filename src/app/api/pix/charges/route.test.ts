@@ -18,8 +18,8 @@ describe("POST /api/pix/charges", () => {
     vi.restoreAllMocks();
   });
 
-  it("usa o preço do catálogo para presente fixo e ignora valor do client", async () => {
-    process.env = { ...originalEnv, PIX_KEY_CPF: "12345678901", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+  it("usa PIX_KEY genérica, preço do catálogo para presente fixo e ignora valor do client", async () => {
+    process.env = { ...originalEnv, PIX_KEY: "evp-aleatoria-123e4567-e89b-12d3-a456-426614174000", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
     const response = await POST(request({ amount: "1.00", giftId: "lava-seca" }));
     const json = await response.json();
     expect(response.ok).toBe(true);
@@ -30,7 +30,7 @@ describe("POST /api/pix/charges", () => {
   });
 
   it("aceita valor livre válido", async () => {
-    process.env = { ...originalEnv, PIX_KEY_CPF: "12345678901", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+    process.env = { ...originalEnv, PIX_KEY: "evp-aleatoria-123e4567-e89b-12d3-a456-426614174000", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
     const response = await POST(request({ amount: "150.00", giftId: "valor-livre" }));
     const json = await response.json();
     expect(response.ok).toBe(true);
@@ -40,13 +40,13 @@ describe("POST /api/pix/charges", () => {
   });
 
   it("recusa valor livre inválido", async () => {
-    process.env = { ...originalEnv, PIX_KEY_CPF: "12345678901", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+    process.env = { ...originalEnv, PIX_KEY: "evp-aleatoria-123e4567-e89b-12d3-a456-426614174000", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
     const response = await POST(request({ amount: "-10", giftId: "valor-livre" }));
     expect(response.status).toBe(400);
   });
 
   it("retorna erro claro quando Pix não está configurado", async () => {
-    process.env = { ...originalEnv, PIX_KEY_CPF: "", PIX_RECEIVER_NAME: "", PIX_RECEIVER_CITY: "" };
+    process.env = { ...originalEnv, PIX_KEY: "", PIX_KEY_CPF: "", PIX_RECEIVER_NAME: "", PIX_RECEIVER_CITY: "" };
     const response = await POST(request({ giftId: "buffet" }));
     const json = await response.json();
     expect(response.status).toBe(503);
@@ -54,9 +54,17 @@ describe("POST /api/pix/charges", () => {
   });
 
   it("não retorna status paid", async () => {
-    process.env = { ...originalEnv, PIX_KEY_CPF: "12345678901", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+    process.env = { ...originalEnv, PIX_KEY: "evp-aleatoria-123e4567-e89b-12d3-a456-426614174000", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
     const response = await POST(request({ giftId: "buffet" }));
     const json = await response.json();
     expect(JSON.stringify(json)).not.toContain("paid");
+  });
+
+  it("mantém fallback temporário para PIX_KEY_CPF deprecated", async () => {
+    process.env = { ...originalEnv, PIX_KEY: "", PIX_KEY_CPF: "12345678901", PIX_RECEIVER_NAME: "Maria Sergio", PIX_RECEIVER_CITY: "Recife" };
+    const response = await POST(request({ giftId: "buffet" }));
+    const json = await response.json();
+    expect(response.ok).toBe(true);
+    expect(json.pixCopyPaste).toMatch(/^000201/);
   });
 });

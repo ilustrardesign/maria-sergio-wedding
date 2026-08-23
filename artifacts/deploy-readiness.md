@@ -63,7 +63,7 @@ Implemented locally:
 
 Blocked:
 
-- `PIX_KEY_CPF` is not configured locally;
+- `PIX_KEY` is not configured locally; `PIX_KEY_CPF` remains a deprecated fallback only;
 - `PIX_RECEIVER_NAME` is not configured locally;
 - `PIX_RECEIVER_CITY` is not configured locally;
 - real QR/Pix Copia e Cola and bank-app review were not tested.

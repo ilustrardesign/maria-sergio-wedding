@@ -29,7 +29,7 @@ export function HeroSection({ content }: HeroSectionProps) {
 
   return (
     <section aria-labelledby="hero-title" className={styles.hero} id="inicio">
-      <div className={styles.heroPhoto} data-parallax="3">
+      <div className={styles.heroPhoto}>
         <picture>
           <source
             media="(orientation: landscape), (min-aspect-ratio: 1/1)"

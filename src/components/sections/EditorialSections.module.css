@@ -18,7 +18,7 @@
 }
 .heroPhoto {
   position: absolute;
-  inset: 0;
+  inset: -1px 0 0;
   z-index: 0;
 }
 .heroPhoto picture {
@@ -36,7 +36,7 @@
 }
 .heroVeil {
   position: absolute;
-  inset: 0;
+  inset: -1px 0 0;
   z-index: 1;
   background:
     linear-gradient(90deg, rgb(253 251 246 / 58%) 0 20%, rgb(253 251 246 / 34%) 35%, rgb(253 251 246 / 0%) 56%),

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import type { RsvpPayload } from "@/lib/rsvp";
+import { sendRsvpEmails } from "@/lib/resend";
 
 export const runtime = "nodejs";
 
@@ -59,10 +60,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const receivedAt = new Date().toISOString();
   const response = await fetch(appsScriptUrl, {
     body: JSON.stringify({
       payload,
-      receivedAt: new Date().toISOString(),
+      receivedAt,
       secret: sharedSecret,
       source: "maria-sergio-site",
     }),
@@ -78,5 +80,13 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ id: result.id ?? null, submitted: true });
+  let emailNotificationSent = false;
+  try {
+    const emailResult = await sendRsvpEmails({ payload, receivedAt });
+    emailNotificationSent = emailResult.sent;
+  } catch (error) {
+    console.error("RSVP email notification failed after persistence", error);
+  }
+
+  return NextResponse.json({ emailNotificationSent, id: result.id ?? null, submitted: true });
 }

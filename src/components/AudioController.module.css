@@ -1,13 +1,14 @@
 .audioControl {
   position: fixed;
-  top: max(1rem, env(safe-area-inset-top));
-  right: max(1rem, env(safe-area-inset-right));
+  top: max(0.9rem, env(safe-area-inset-top));
+  right: max(1.15rem, env(safe-area-inset-right));
   z-index: var(--z-controls);
 }
+
 .audioButton {
   display: grid;
-  width: 3rem;
-  height: 3rem;
+  width: 3.05rem;
+  height: 3.05rem;
   place-items: center;
   border: 1px solid rgb(116 123 85 / 38%);
   border-radius: 50%;
@@ -16,21 +17,79 @@
   color: var(--color-olive-dark);
   cursor: pointer;
   backdrop-filter: blur(8px);
-  transition: transform var(--duration-fast), background var(--duration-fast);
+  transition: transform var(--duration-fast), background var(--duration-fast), color var(--duration-fast);
 }
-.audioButton:hover:not(:disabled) { background: var(--color-olive-dark); color: var(--color-warm-white); transform: translateY(-2px); }
-.audioButton:disabled { box-shadow: none; cursor: not-allowed; opacity: 0.48; }
-.equalizer, .equalizerActive {
+
+.audioButton:hover {
+  background: var(--color-olive-dark);
+  color: var(--color-warm-white);
+  transform: translateY(-2px);
+}
+
+.spotifyPanel {
   position: absolute;
-  right: 0.32rem;
-  bottom: 0.36rem;
-  display: flex;
-  height: 0.55rem;
-  align-items: end;
-  gap: 1px;
+  top: calc(100% + 0.7rem);
+  right: 0;
+  width: min(22rem, calc(100vw - 2rem));
+  overflow: hidden;
+  border: 1px solid rgb(116 123 85 / 28%);
+  background: var(--color-warm-white);
+  box-shadow: var(--shadow-float);
 }
-.equalizer i, .equalizerActive i { display: block; width: 1px; height: 30%; background: currentColor; }
-.equalizerActive i { animation: audio-level 900ms ease-in-out infinite alternate; }
-.equalizerActive i:nth-child(2) { animation-delay: -300ms; }
-.equalizerActive i:nth-child(3) { animation-delay: -600ms; }
-@keyframes audio-level { to { height: 100%; } }
+
+.spotifyHeader {
+  display: flex;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.72rem 0.55rem 0.9rem;
+  border-bottom: 1px solid rgb(116 123 85 / 16%);
+  color: var(--color-olive-dark);
+  font-family: var(--font-functional);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.spotifyHeader button {
+  display: grid;
+  width: 2.15rem;
+  height: 2.15rem;
+  place-items: center;
+  border: 1px solid rgb(116 123 85 / 24%);
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.spotifyPanel iframe {
+  display: block;
+  width: 100%;
+  height: 22rem;
+  border: 0;
+}
+
+@media (max-width: 48rem) {
+  .audioControl {
+    top: max(0.72rem, env(safe-area-inset-top));
+    right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .audioButton {
+    width: 2.85rem;
+    height: 2.85rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audioButton {
+    transition: none;
+  }
+
+  .audioButton:hover {
+    transform: none;
+  }
+}

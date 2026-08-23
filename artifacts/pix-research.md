@@ -47,7 +47,8 @@ Status: BLOCKED
 The local environment does not currently configure:
 
 - `PIX_PROVIDER`
-- `PIX_KEY_CPF`
+- `PIX_KEY`
+- `PIX_KEY_CPF` deprecated fallback only
 - `PIX_STATIC_KEY`
 - `PIX_MERCHANT_NAME`
 - `PIX_MERCHANT_CITY`
@@ -72,7 +73,8 @@ Implemented now:
 
 ```env
 PIX_PROVIDER=simulation
-PIX_KEY_CPF=<configured server-side only>
+PIX_KEY=<configured server-side only>
+PIX_KEY_CPF=<deprecated fallback only>
 ```
 
 Future production adapter:

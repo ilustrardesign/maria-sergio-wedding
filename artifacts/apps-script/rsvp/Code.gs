@@ -41,6 +41,7 @@ function doPost(e) {
     const expectedSecret = properties.getProperty("RSVP_SHARED_SECRET");
     const spreadsheetId = properties.getProperty("RSVP_SPREADSHEET_ID");
     const notificationEmails = properties.getProperty("RSVP_NOTIFICATION_EMAILS");
+    const mailAppEnabled = properties.getProperty("RSVP_MAILAPP_ENABLED") !== "false";
 
     if (!expectedSecret || body.secret !== expectedSecret) {
       return json_({ ok: false, message: "Não autorizado." }, 401);
@@ -67,7 +68,7 @@ function doPost(e) {
       payload.message,
     ]);
 
-    if (notificationEmails) {
+    if (mailAppEnabled && notificationEmails) {
       MailApp.sendEmail({
         to: notificationEmails,
         subject: `RSVP — Maria e Sérgio — ${payload.firstName} ${payload.lastName}`.trim(),

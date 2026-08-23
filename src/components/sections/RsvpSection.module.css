@@ -311,6 +311,10 @@
   margin-top: 1.6rem;
 }
 
+.wideField {
+  grid-column: 1 / -1;
+}
+
 .fieldError {
   margin: 0.45rem 0 0;
   color: var(--color-error);

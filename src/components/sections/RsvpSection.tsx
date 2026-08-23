@@ -323,7 +323,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
             </fieldset>
 
             <div className={styles.fieldGrid}>
-              <div className={[styles.field, styles.messageField].join(" ")}>
+              <div className={[styles.field, styles.messageField, styles.wideField].join(" ")}>
                 <label htmlFor="rsvp-guest-names">
                   {rsvp.labels.guestNames}
                   {attendance === "yes" ? (

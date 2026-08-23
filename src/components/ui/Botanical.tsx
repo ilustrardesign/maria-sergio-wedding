@@ -4,14 +4,11 @@ type BotanicalProps = {
 
 export function BotanicalDivider({ className }: BotanicalProps) {
   return (
-    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 760 120">
-      <path d="M94 62c92 18 185 18 286 0s194-18 286 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.1" />
-      <path d="M380 62c-34-29-61-44-95-44 20 27 47 41 95 44Zm0 0c34-29 61-44 95-44-20 27-47 41-95 44Z" stroke="currentColor" strokeWidth="1" />
-      <path d="M276 65c-24 11-45 16-70 13 15-18 36-23 70-13Zm208 0c24 11 45 16 70 13-15-18-36-23-70-13Z" stroke="currentColor" strokeWidth="1" />
-      <circle cx="350" cy="54" r="4" fill="currentColor" opacity=".62" />
-      <circle cx="380" cy="62" r="5" fill="currentColor" opacity=".72" />
-      <circle cx="410" cy="54" r="4" fill="currentColor" opacity=".62" />
-      <path d="M330 76c16 16 31 23 50 23 19 0 34-7 50-23" stroke="currentColor" strokeLinecap="round" strokeWidth="1" opacity=".75" />
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 760 128">
+      <path d="M106 76c74-18 137-19 204-6 81 16 151 9 225-17 45-16 84-19 119-8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.15" />
+      <path d="M263 67c-32-24-60-31-91-21 25 25 55 32 91 21Zm57 8c-21 23-45 34-75 34 17-27 41-39 75-34Zm113-8c29-28 58-39 91-34-22 30-51 42-91 34Zm70-18c10-29 28-46 55-52-4 31-23 50-55 52Z" stroke="currentColor" strokeWidth="1" />
+      <path d="M338 72c26-8 52-8 78 1" stroke="currentColor" strokeLinecap="round" strokeWidth="0.9" opacity=".72" />
+      <path d="M606 49c17 12 31 17 48 16" stroke="currentColor" strokeLinecap="round" strokeWidth="0.9" opacity=".64" />
     </svg>
   );
 }
