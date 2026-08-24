@@ -57,6 +57,11 @@ declare global {
 let spotifyApi: SpotifyIframeApi | null = null;
 let spotifyApiPromise: Promise<SpotifyIframeApi> | null = null;
 
+export function __resetSpotifyIframeApiForTests() {
+  spotifyApi = null;
+  spotifyApiPromise = null;
+}
+
 function loadSpotifyIframeApi() {
   if (spotifyApi) return Promise.resolve(spotifyApi);
   if (spotifyApiPromise) return spotifyApiPromise;
@@ -86,6 +91,7 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
     const embedRef = useRef<HTMLDivElement>(null);
     const controllerRef = useRef<SpotifyEmbedController | null>(null);
     const loopRestartingRef = useRef(false);
+    const previewDetectedRef = useRef(false);
     const pendingGesturePlayRef = useRef(false);
     const [open, setOpen] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -152,9 +158,16 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
               setIsPlaying(playing);
 
               if (duration <= 0) return;
+              if (duration < 60000) {
+                previewDetectedRef.current = true;
+                loopRestartingRef.current = false;
+                return;
+              }
+
+              previewDetectedRef.current = false;
               const remaining = duration - position;
               const nearEnd = playing && position > duration * 0.92 && remaining <= 1500;
-              if (nearEnd && !loopRestartingRef.current) {
+              if (nearEnd && !loopRestartingRef.current && !previewDetectedRef.current) {
                 loopRestartingRef.current = true;
                 try {
                   controller.restart();

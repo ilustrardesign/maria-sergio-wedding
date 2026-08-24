@@ -25,6 +25,7 @@ Fotos Extraídas de la Página Web/
 # QA / artefactos temporales
 artifacts/screenshots/
 artifacts/gift-scrape/
+artifacts/private/
 
 # Imágenes fuente de trabajo; las versiones usadas por la web viven en public/
 FotoparaPortada.jpeg

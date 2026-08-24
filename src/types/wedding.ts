@@ -95,12 +95,12 @@ export interface GalleryItem {
 }
 export interface GalleryConfig { eyebrow: string; title: string; introduction: EditableField<string>; items: GalleryItem[]; }
 export interface RsvpFieldLabels {
-  firstName: string;
-  lastName: string;
+  inviteCode: string;
+  inviteCodeHelp: string;
+  canonicalName: string;
+  canonicalNameHelp: string;
   phone: string;
   email: string;
-  guestNames: string;
-  guestNamesHelp: string;
   attendance: string;
   attendanceYes: string;
   attendanceNo: string;
@@ -112,6 +112,10 @@ export interface RsvpMessages {
   required: string;
   invalidEmail: string;
   invalidPhone: string;
+  inviteRequired: string;
+  invalidInvite: string;
+  inviteLookupFailed: string;
+  inviteResolved: string;
   demo: string;
   success: string;
   endpointMissing: string;

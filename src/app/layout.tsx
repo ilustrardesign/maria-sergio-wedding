@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
 import { weddingContent } from "@/content/wedding";
+import { getSiteUrl } from "@/lib/site";
 
 import "./globals.css";
 
@@ -31,15 +32,15 @@ const script = localFont({
   variable: "--font-script-face",
 });
 
-const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-const metadataBase = new URL(configuredSiteUrl ?? "http://localhost:3000");
+const configuredSiteUrl = getSiteUrl();
+const metadataBase = new URL(configuredSiteUrl);
 
 export const metadata: Metadata = {
   metadataBase,
   title: weddingContent.metadata.title,
   description: weddingContent.metadata.description,
   applicationName: "Maria & Sérgio",
-  alternates: configuredSiteUrl ? { canonical: configuredSiteUrl } : undefined,
+  alternates: { canonical: configuredSiteUrl },
   icons: { icon: "/icon.png", apple: "/icon.png" },
   manifest: "/manifest.webmanifest",
   openGraph: {

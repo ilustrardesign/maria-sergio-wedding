@@ -1,12 +1,6 @@
-export type RsvpPayload = {
-  attendance: "yes" | "no";
-  email: string;
-  firstName: string;
-  guestNames: string;
-  lastName: string;
-  message: string;
-  phone: string;
-};
+import type { RsvpSubmissionPayload } from "@/lib/invite";
+
+export type RsvpPayload = RsvpSubmissionPayload;
 
 export type RsvpResult =
   | { mode: "demo"; submitted: false }

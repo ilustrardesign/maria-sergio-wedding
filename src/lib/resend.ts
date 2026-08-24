@@ -1,10 +1,27 @@
 import { renderRsvpAdminEmail } from "@/emails/RsvpAdminEmail";
 import { renderRsvpGuestEmail } from "@/emails/RsvpGuestEmail";
-import type { RsvpPayload } from "@/lib/rsvp";
+import type { InviteDependent } from "@/lib/invite";
 
 type RsvpEmailInput = {
-  payload: RsvpPayload;
+  attendance: "yes" | "no";
+  dependents?: InviteDependent[];
+  displayName: string;
+  email: string;
+  guestId: string;
+  inviteCodeRef: string;
+  message: string;
+  phone: string;
   receivedAt: string;
+  side?: string;
+};
+
+type RsvpEmailStatus = "sent" | "failed" | "skipped";
+
+type RsvpEmailResult = {
+  admin: RsvpEmailStatus;
+  guest: RsvpEmailStatus;
+  attempted: boolean;
+  sent: boolean;
 };
 
 type ResendEmail = {
@@ -46,21 +63,37 @@ async function sendEmail(message: ResendEmail, apiKey: string) {
   if (!response.ok) throw new Error("Resend request failed.");
 }
 
-export async function sendRsvpEmails({ payload, receivedAt }: RsvpEmailInput) {
-  if (!isResendEnabled()) return { attempted: false, sent: false };
+export async function sendRsvpEmails(input: RsvpEmailInput): Promise<RsvpEmailResult> {
+  if (!isResendEnabled()) return { attempted: false, admin: "skipped", guest: "skipped", sent: false };
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const admins = splitEmails(process.env.RESEND_ADMIN_EMAILS);
-  if (!apiKey || admins.length === 0) return { attempted: false, sent: false };
+  if (!apiKey) return { attempted: false, admin: "skipped", guest: "skipped", sent: false };
 
-  const adminEmail = renderRsvpAdminEmail({ payload, receivedAt });
-  const guestEmail = payload.email ? renderRsvpGuestEmail({ payload }) : null;
-  const replyTo = payload.email ? [payload.email] : [defaultReplyTo()];
+  const adminEmail = renderRsvpAdminEmail(input);
+  const guestEmail = input.email ? renderRsvpGuestEmail({ attendance: input.attendance, firstName: input.displayName.split(/\s+/)[0] || input.displayName }) : null;
+  const replyTo = input.email ? [input.email] : [defaultReplyTo()];
 
-  await sendEmail({ ...adminEmail, reply_to: replyTo, to: admins }, apiKey);
-  if (guestEmail) {
-    await sendEmail({ ...guestEmail, reply_to: [defaultReplyTo()], to: [payload.email] }, apiKey);
+  let admin: RsvpEmailStatus = "skipped";
+  let guest: RsvpEmailStatus = "skipped";
+
+  if (admins.length > 0) {
+    try {
+      await sendEmail({ ...adminEmail, reply_to: replyTo, to: admins }, apiKey);
+      admin = "sent";
+    } catch {
+      admin = "failed";
+    }
   }
 
-  return { attempted: true, sent: true };
+  if (guestEmail && input.email) {
+    try {
+      await sendEmail({ ...guestEmail, reply_to: [defaultReplyTo()], to: [input.email] }, apiKey);
+      guest = "sent";
+    } catch {
+      guest = "failed";
+    }
+  }
+
+  return { attempted: true, admin, guest, sent: admin === "sent" || guest === "sent" };
 }
