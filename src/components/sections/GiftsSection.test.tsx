@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +21,41 @@ const gifts: GiftsConfig = {
       title: "Garantir o primeiro lugar na fila do buffet",
       price: "R$177,92",
       image: { src: "/gift.jpg", alt: "Presente", width: 600, height: 600, status: "confirmed" },
+      paymentLabel: "Escolher este presente",
+    },
+    {
+      id: "valor-livre",
+      title: "Não achou o presente perfeito?",
+      price: "Valor livre",
+      image: { src: "/gift.svg", alt: "Valor livre", width: 600, height: 600, status: "confirmed" },
+      paymentLabel: "Escolher este presente",
+      customAmount: true,
+    },
+  ],
+};
+
+const unsortedGifts: GiftsConfig = {
+  ...gifts,
+  items: [
+    {
+      id: "expensive",
+      title: "Presente caro",
+      price: "R$3.194,99",
+      image: { src: "/expensive.jpg", alt: "Caro", width: 600, height: 600, status: "confirmed" },
+      paymentLabel: "Escolher este presente",
+    },
+    {
+      id: "cheap",
+      title: "Presente barato",
+      price: "R$85,19",
+      image: { src: "/cheap.jpg", alt: "Barato", width: 600, height: 600, status: "confirmed" },
+      paymentLabel: "Escolher este presente",
+    },
+    {
+      id: "middle",
+      title: "Presente intermediário",
+      price: "R$250,46",
+      image: { src: "/middle.jpg", alt: "Intermediário", width: 600, height: 600, status: "confirmed" },
       paymentLabel: "Escolher este presente",
     },
     {
@@ -146,5 +181,31 @@ describe("GiftsSection Pix flow", () => {
 
     expect(writeText).toHaveBeenCalledWith(pixPayload);
     expect(screen.getAllByText("Código copiado")).toHaveLength(2);
+  });
+
+  it("exibe presentes fixos em ordem crescente e mantém valor livre por último", async () => {
+    const response = deferred<{
+      json: () => Promise<{ amount: string; pixCopyPaste: string; qrCode: string; txid: string }>;
+      ok: boolean;
+    }>();
+    const fetchMock = vi.fn().mockReturnValue(response.promise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<GiftsSection gifts={unsortedGifts} />);
+
+    const items = screen.getAllByRole("listitem");
+    expect(items).toHaveLength(4);
+    expect(within(items[0]).getByText("Presente barato")).toBeInTheDocument();
+    expect(within(items[1]).getByText("Presente intermediário")).toBeInTheDocument();
+    expect(within(items[2]).getByText("Presente caro")).toBeInTheDocument();
+    expect(within(items[3]).getByText("Não achou o presente perfeito?")).toBeInTheDocument();
+
+    await userEvent.click(within(items[0]).getByRole("button", { name: "Escolher este presente" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/pix/charges",
+      expect.objectContaining({ body: JSON.stringify({ giftId: "cheap" }) }),
+    );
   });
 });

@@ -263,7 +263,7 @@ export const weddingContent = {
       { id: "cabelo", title: "Um ano de cabelo cortado para o noivo", price: "R$418,08", image: { src: "/images/gifts/original/25-cabelo-noivo.jpg", alt: "Imagem cômica de barbearia para o corte de cabelo do noivo.", width: 600, height: 600, status: "confirmed" }, paymentLabel: "Escolher este presente" },
       { id: "valor-livre", title: "Não achou o presente perfeito?", description: "Escolha o valor. A gente promete usar com sabedoria. Talvez.", price: "Valor livre", image: { src: "/images/gifts/original/26-valor-livre.svg", alt: "Envelope de presente para valor livre.", width: 600, height: 600, status: "confirmed" }, paymentLabel: "Escolher este presente", customAmount: true },
     ],
-    pendingMessage: "Selecione uma opção para presentear Maria e Sérgio.",
+    pendingMessage: "Escolha uma das opções abaixo.",
   },
   travel: {
     enabled: false,

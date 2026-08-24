@@ -21,6 +21,26 @@ function normalizeAmount(value: string) {
   return value.replace(/[^\d,]/g, "").replace(",", ".");
 }
 
+function giftPriceToNumber(price: string) {
+  const normalized = price.replace(/[^\d,]/g, "").replace(",", ".");
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
+}
+
+function sortGiftsForDisplay(items: GiftItem[]) {
+  return items
+    .map((item, index) => ({ index, item }))
+    .sort((left, right) => {
+      if (left.item.customAmount && right.item.customAmount) return left.index - right.index;
+      if (left.item.customAmount) return 1;
+      if (right.item.customAmount) return -1;
+
+      const byPrice = giftPriceToNumber(left.item.price) - giftPriceToNumber(right.item.price);
+      return byPrice || left.index - right.index;
+    })
+    .map(({ item }) => item);
+}
+
 export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
   const hasPlatform = Boolean(gifts.platform.value?.url);
   const [selectedGift, setSelectedGift] = useState<GiftItem | null>(null);
@@ -32,6 +52,7 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
     if (!selectedGift) return "";
     return selectedGift.customAmount ? customAmount.trim() : selectedGift.price;
   }, [customAmount, selectedGift]);
+  const displayItems = useMemo(() => sortGiftsForDisplay(gifts.items), [gifts.items]);
 
   async function prepareCharge(gift: GiftItem) {
     const amount = gift.customAmount ? normalizeAmount(customAmount) : gift.price;
@@ -105,10 +126,10 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
           )}
         </div>
       </div>
-      {gifts.items.length > 0 ? (
+      {displayItems.length > 0 ? (
         <div className={["section-inner", styles.giftListWrap].join(" ")}>
           <ol className={styles.giftList} data-reveal>
-            {gifts.items.map((item, index) => (
+            {displayItems.map((item, index) => (
               <li className={[styles.giftItem, item.customAmount ? styles.giftItemCustom : ""].filter(Boolean).join(" ")} key={item.id}>
                 <figure
                   className={styles.giftImage}
