@@ -39,7 +39,13 @@ export function WeddingExperience({ content }: WeddingExperienceProps) {
       <InvitationOpening monogramSrc={content.assets.monogram.src} onOpen={handleOpen} />
       <Navigation content={content} />
       {content.features.showAudioControl ? (
-        <AudioController enabled={content.audio.enabled} ref={audioRef} spotifyUrl={content.audio.spotifyUrl} title={content.audio.title} />
+        <AudioController
+          enabled={content.audio.enabled}
+          ref={audioRef}
+          spotifyUri={content.audio.spotifyUri}
+          spotifyUrl={content.audio.spotifyUrl}
+          title={content.audio.title}
+        />
       ) : null}
       <main id="conteudo" ref={mainRef}>
         <HeroSection content={content} />

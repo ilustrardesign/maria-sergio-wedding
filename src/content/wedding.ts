@@ -61,6 +61,7 @@ export const weddingContent = {
     enabled: true,
     src: "/audio/maria-e-sergio-theme.mp3",
     spotifyUrl: "https://open.spotify.com/embed/track/6c6brFif6MTMSq0sVwgMAT?utm_source=generator&theme=0&si=e4289c78d01342fd",
+    spotifyUri: "spotify:track:6c6brFif6MTMSq0sVwgMAT",
     title: "Beija Flor — João Gomes",
     missingMessage: "A trilha será adicionada em breve.",
   },

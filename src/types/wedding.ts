@@ -25,7 +25,7 @@ export interface PhotoTreatment {
   mobilePosition: string;
   overlay?: "ivory" | "olive" | "none";
 }
-export interface AudioConfig { enabled: boolean; src: string; spotifyUrl: string; title: string; missingMessage: string; }
+export interface AudioConfig { enabled: boolean; src: string; spotifyUrl: string; spotifyUri: string; title: string; missingMessage: string; }
 export interface MetadataConfig { title: string; description: string; canonicalUrl: EditableField<string>; openGraphImage: string; themeColor: string; }
 export interface NavigationItem { label: string; href: string; }
 export interface OpeningCopy {
