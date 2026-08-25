@@ -23,6 +23,18 @@ export type RsvpResult =
     };
 
 export async function submitRsvp(payload: RsvpPayload, endpoint = "/api/rsvp"): Promise<RsvpResult> {
+  if (!endpoint.trim()) {
+    return {
+      adminEmail: "skipped",
+      emailNotificationSent: false,
+      guestEmail: "skipped",
+      id: null,
+      mode: "demo",
+      persisted: false,
+      submitted: true,
+    };
+  }
+
   const response = await fetch(endpoint, {
     body: JSON.stringify(payload),
     headers: { "Content-Type": "application/json" },
@@ -52,6 +64,10 @@ export async function submitRsvp(payload: RsvpPayload, endpoint = "/api/rsvp"): 
       persisted: false,
       submitted: true,
     };
+  }
+
+  if ("persisted" in result && result.persisted !== true) {
+    throw new Error("A confirmação não foi persistida.");
   }
 
   return {

@@ -24,6 +24,7 @@ Fotos Extraídas de la Página Web/
 
 # QA / artefactos temporales
 artifacts/screenshots/
+artifacts/debug/
 artifacts/gift-scrape/
 artifacts/private/
 

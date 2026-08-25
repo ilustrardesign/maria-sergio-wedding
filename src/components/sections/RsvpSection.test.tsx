@@ -39,6 +39,8 @@ describe("RsvpSection", () => {
     render(<RsvpSection content={weddingContent} />);
 
     const search = screen.getByRole("combobox", { name: /Quem está confirmando presença/ });
+    expect(screen.getAllByText("Digite o nome e selecione-o na lista.")).toHaveLength(1);
+    expect(search).toHaveAttribute("placeholder", "Digite seu nome ou sobrenome");
     await user.type(search, "ped");
 
     expect(await screen.findByRole("option", { name: "Pedro Ivo" })).toBeInTheDocument();

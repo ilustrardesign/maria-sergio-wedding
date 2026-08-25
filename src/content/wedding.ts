@@ -14,10 +14,10 @@ export const weddingContent = {
     receptionTime: pending(""),
   },
   metadata: {
-    title: "Maria & Sérgio — 31 de outubro de 2026",
-    description: "Convite de casamento de Maria e Sérgio, em 31 de outubro de 2026.",
+    title: "Maria & Sérgio | 31.10.2026",
+    description: "Nosso grande dia está chegando. Celebre conosco o casamento de Maria & Sérgio, em 31 de outubro de 2026.",
     canonicalUrl: confirmed("https://mariaesergio.com"),
-    openGraphImage: "/images/wedding/preview/hero-cover-fotoparaportada.jpeg",
+    openGraphImage: "/images/social/maria-sergio-og.jpg",
     themeColor: "#747b55",
   },
   assets: {
@@ -201,7 +201,7 @@ export const weddingContent = {
   rsvp: {
     eyebrow: "CONFIRMAÇÃO DE PRESENÇA",
     title: "RSVP",
-    introduction: "Digite o nome ou sobrenome e selecione apenas pessoas reais da lista privada.",
+    introduction: "Confirme sua presença com carinho para nos ajudar a preparar cada detalhe.",
     modeEnvironmentVariable: "NEXT_PUBLIC_RSVP_MODE",
     defaultMode: "endpoint",
     maxGuests: pending<number>(""),

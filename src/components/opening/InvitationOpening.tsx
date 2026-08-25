@@ -86,13 +86,16 @@ export function InvitationOpening({ monogramSrc, onOpen }: InvitationOpeningProp
         <div aria-hidden="true" className={styles.paperGrain} />
         <div className={styles.scene}>
           <p className={styles.preTitle}>31 · 10 · 2026</p>
-          <div className={styles.envelope} ref={envelopeRef}>
+          <div className={[styles.envelope, opening ? styles.envelopeOpening : ""].filter(Boolean).join(" ")} ref={envelopeRef}>
             <span aria-hidden="true" className={styles.envelopeBack} />
+            <span aria-hidden="true" className={styles.envelopeInterior} />
             <div className={styles.card} ref={cardRef}>
               <Monogram className={styles.monogram} src={monogramSrc} />
               <span aria-hidden="true" className={styles.cardRule} />
               <p>Maria &amp; Sérgio</p>
             </div>
+            <span aria-hidden="true" className={styles.envelopeSideLeft} />
+            <span aria-hidden="true" className={styles.envelopeSideRight} />
             <span aria-hidden="true" className={styles.envelopeFront} />
             <span aria-hidden="true" className={styles.envelopeFlap} ref={flapRef} />
           </div>

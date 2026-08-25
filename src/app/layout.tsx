@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
 import { weddingContent } from "@/content/wedding";
-import { getSiteUrl } from "@/lib/site";
+import { CANONICAL_SITE_URL } from "@/lib/site";
 
 import "./globals.css";
 
@@ -32,30 +32,37 @@ const script = localFont({
   variable: "--font-script-face",
 });
 
-const configuredSiteUrl = getSiteUrl();
-const metadataBase = new URL(configuredSiteUrl);
+const canonicalUrl = weddingContent.metadata.canonicalUrl.value || CANONICAL_SITE_URL;
+const metadataBase = new URL(canonicalUrl);
+const socialImage = {
+  url: weddingContent.metadata.openGraphImage,
+  width: 1200,
+  height: 630,
+  alt: "Maria & Sérgio, 31 de outubro de 2026, Cabedelo, Paraíba.",
+};
 
 export const metadata: Metadata = {
   metadataBase,
   title: weddingContent.metadata.title,
   description: weddingContent.metadata.description,
   applicationName: "Maria & Sérgio",
-  alternates: { canonical: configuredSiteUrl },
+  alternates: { canonical: canonicalUrl },
   icons: { icon: "/icon.png", apple: "/icon.png" },
   manifest: "/manifest.webmanifest",
   openGraph: {
     type: "website",
     locale: "pt_BR",
+    url: canonicalUrl,
     title: weddingContent.metadata.title,
     description: weddingContent.metadata.description,
     siteName: "Maria & Sérgio",
-    images: [{ url: weddingContent.metadata.openGraphImage, width: 1080, height: 1436, alt: weddingContent.assets.saveTheDate.alt }],
+    images: [socialImage],
   },
   twitter: {
     card: "summary_large_image",
     title: weddingContent.metadata.title,
     description: weddingContent.metadata.description,
-    images: [weddingContent.metadata.openGraphImage],
+    images: [socialImage.url],
   },
 };
 

@@ -42,8 +42,8 @@ describe("submitRsvp", () => {
     expect(fetchSpy.mock.calls[0][0]).toBe("/api/rsvp");
   });
 
-  it("só confirma envio após resposta válida do endpoint", async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ adminEmail: "sent", guestEmail: "skipped", id: "row-1" }) });
+  it("só confirma envio após resposta persistida pelo endpoint", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ adminEmail: "sent", guestEmail: "skipped", id: "row-1", persisted: true }) });
     vi.stubGlobal("fetch", fetchSpy);
     await expect(submitRsvp(payload, "https://example.test/rsvp")).resolves.toEqual({
       adminEmail: "sent",
@@ -55,6 +55,11 @@ describe("submitRsvp", () => {
       submitted: true,
     });
     expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("não trata endpoint sem persisted=true como sucesso real", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ adminEmail: "sent", guestEmail: "skipped", id: "row-1", persisted: false }) }));
+    await expect(submitRsvp(payload, "https://example.test/rsvp")).rejects.toThrow(/persistida/);
   });
 
   it("propaga uma mensagem segura quando o endpoint falha", async () => {

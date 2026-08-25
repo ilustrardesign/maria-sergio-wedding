@@ -7,7 +7,9 @@
   min-height: 100svh;
   place-items: center;
   overflow: hidden;
-  background: var(--color-ivory);
+  background:
+    radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--color-sage) 24%, transparent), transparent 42%),
+    var(--color-ivory);
   color: var(--color-olive-dark);
   perspective: 1400px;
 }
@@ -17,8 +19,8 @@
   inset: -30%;
   background:
     var(--paper-noise),
-    radial-gradient(circle at 50% 44%, rgb(255 255 255 / 88%), transparent 38%),
-    linear-gradient(115deg, transparent 0 48%, rgb(105 96 66 / 3%) 50%, transparent 52%);
+    radial-gradient(circle at 50% 44%, rgb(253 251 246 / 88%), transparent 38%),
+    linear-gradient(115deg, transparent 0 48%, rgb(75 82 54 / 3%) 50%, transparent 52%);
   background-size: 31px 29px, auto, 140px 140px;
   opacity: 0.9;
   transform: rotate(4deg);
@@ -45,11 +47,15 @@
   position: relative;
   width: min(82vw, 31rem);
   aspect-ratio: 1.42;
-  filter: drop-shadow(0 28px 60px rgb(73 67 48 / 13%));
+  filter: drop-shadow(0 28px 58px rgb(42 44 32 / 17%));
+  perspective: 1500px;
   transform-style: preserve-3d;
 }
 
 .envelopeBack,
+.envelopeInterior,
+.envelopeSideLeft,
+.envelopeSideRight,
 .envelopeFront,
 .envelopeFlap,
 .card {
@@ -58,13 +64,25 @@
 }
 
 .envelopeBack {
-  border: 1px solid rgb(95 87 60 / 13%);
-  background: linear-gradient(160deg, #fbf7ee, #eadfcb);
+  z-index: 1;
+  border: 1px solid color-mix(in srgb, var(--color-olive-dark) 21%, transparent);
+  background:
+    var(--paper-noise),
+    linear-gradient(160deg, color-mix(in srgb, var(--color-sage) 58%, var(--color-ivory)), color-mix(in srgb, var(--color-olive) 48%, var(--color-sand)));
+  background-size: 26px 25px, auto;
+}
+
+.envelopeInterior {
+  z-index: 2;
+  clip-path: polygon(0 0, 50% 47%, 100% 0, 100% 58%, 50% 86%, 0 58%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-warm-white) 72%, var(--color-sage)), color-mix(in srgb, var(--color-sand) 76%, var(--color-olive-soft)));
+  box-shadow: inset 0 18px 34px rgb(42 44 32 / 8%);
 }
 
 .card {
   inset: 8% 8% 15%;
-  z-index: 2;
+  z-index: 4;
   display: grid;
   place-items: center;
   padding: clamp(1.4rem, 5vw, 2.8rem);
@@ -73,7 +91,13 @@
     var(--paper-noise),
     linear-gradient(135deg, rgb(255 255 255 / 96%), rgb(248 243 233 / 98%));
   background-size: 26px 25px, auto;
-  box-shadow: 0 16px 36px rgb(73 67 48 / 8%);
+  box-shadow: 0 16px 36px rgb(42 44 32 / 10%);
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+
+.envelopeOpening .card {
+  opacity: 1;
 }
 
 .card::before {
@@ -86,7 +110,7 @@
 
 .monogram {
   width: clamp(6.6rem, 28%, 9rem);
-  color: var(--color-olive);
+  color: var(--color-olive-dark);
   transform: translateY(-0.38rem);
 }
 
@@ -103,17 +127,43 @@
 }
 
 .envelopeFront {
-  z-index: 3;
-  clip-path: polygon(0 36%, 50% 72%, 100% 36%, 100% 100%, 0 100%);
-  border: 1px solid rgb(95 87 60 / 12%);
-  background: linear-gradient(168deg, #f6efe1, #e7dcc8 78%);
+  z-index: 7;
+  clip-path: polygon(0 29%, 50% 72%, 100% 29%, 100% 100%, 0 100%);
+  border: 1px solid color-mix(in srgb, var(--color-olive-dark) 18%, transparent);
+  background:
+    linear-gradient(168deg, color-mix(in srgb, var(--color-sage) 54%, var(--color-ivory)), color-mix(in srgb, var(--color-olive) 47%, var(--color-sand)) 78%);
+  box-shadow:
+    inset 0 1px 0 rgb(253 251 246 / 32%),
+    inset 0 18px 22px rgb(75 82 54 / 5%);
+}
+
+.envelopeSideLeft,
+.envelopeSideRight {
+  z-index: 5;
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--color-sage) 50%, var(--color-ivory)), color-mix(in srgb, var(--color-olive) 43%, var(--color-sand)));
+  pointer-events: none;
+}
+
+.envelopeSideLeft {
+  clip-path: polygon(0 29%, 50% 72%, 0 100%);
+}
+
+.envelopeSideRight {
+  clip-path: polygon(100% 29%, 50% 72%, 100% 100%);
 }
 
 .envelopeFlap {
-  z-index: 4;
-  clip-path: polygon(0 0, 100% 0, 50% 58%);
-  background: linear-gradient(175deg, #fbf8ef, #e9dfcc);
+  z-index: 8;
+  clip-path: polygon(0 0, 100% 0, 50% 72%);
+  background:
+    linear-gradient(175deg, color-mix(in srgb, var(--color-sage) 52%, var(--color-ivory)), color-mix(in srgb, var(--color-olive) 46%, var(--color-sand)));
+  box-shadow:
+    0 9px 16px rgb(42 44 32 / 8%),
+    inset 0 -1px 0 rgb(75 82 54 / 10%);
+  backface-visibility: hidden;
   transform-origin: 50% 0;
+  transform-style: preserve-3d;
   will-change: transform;
 }
 

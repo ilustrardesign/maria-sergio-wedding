@@ -82,7 +82,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     if (searchTone === "warning" && searchFeedback === "Selecione um nome da lista para adicioná-lo.") return searchFeedback;
     if (searchTone === "success" && searchFeedback !== rsvp.labels.guestSearchHelp) return searchFeedback;
     if (searchState === "loading") return rsvp.labels.guestSearchLoading;
-    if (queryTrimmed.length === 0) return rsvp.labels.guestSearchHelp;
+    if (queryTrimmed.length === 0) return "";
     if (queryTrimmed.length < 2) return rsvp.labels.guestSearchMinimum;
     if (searchState === "empty") return `${rsvp.labels.guestSearchEmpty} Confira a escrita ou tente outro sobrenome.`;
     if (searchState === "error") return rsvp.messages.guestSearchFailed;
@@ -407,6 +407,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                   id={guestSearchId}
                   maxLength={120}
                   aria-haspopup="listbox"
+                  placeholder="Digite seu nome ou sobrenome"
                   role="combobox"
                   onBlur={() => {
                     window.setTimeout(() => {
