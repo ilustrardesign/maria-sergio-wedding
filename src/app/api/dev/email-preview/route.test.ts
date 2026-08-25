@@ -9,7 +9,7 @@ describe("GET /api/dev/email-preview", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
-    expect(html).toContain("Que alegria ter você conosco");
+    expect(html).toContain("Que alegria ter vocês conosco");
     expect(html).toContain("https://mariaesergio.com");
     expect(html).toContain("Com carinho,");
   });

@@ -6,7 +6,7 @@ import { sendRsvpEmails } from "./resend";
 
 describe("Resend templates", () => {
   it("usa a URL de produção no HTML e no texto do convidado", () => {
-    const email = renderRsvpGuestEmail({ attendance: "yes", firstName: "Maria" });
+    const email = renderRsvpGuestEmail({ attendance: "yes", selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }] });
     expect(email.html).toContain("https://mariaesergio.com");
     expect(email.text).toContain("https://mariaesergio.com");
     expect(email.html).toContain("style=");
@@ -14,29 +14,25 @@ describe("Resend templates", () => {
   });
 
   it("mantém a copy de presença e ausência", () => {
-    expect(renderRsvpGuestEmail({ attendance: "yes", firstName: "Maria" }).subject).toBe("Que alegria ter você conosco — Maria & Sérgio");
-    expect(renderRsvpGuestEmail({ attendance: "no", firstName: "Maria" }).subject).toBe("Recebemos sua resposta — Maria & Sérgio");
+    expect(renderRsvpGuestEmail({ attendance: "yes", selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }] }).subject).toBe("Que alegria ter vocês conosco — Maria & Sérgio");
+    expect(renderRsvpGuestEmail({ attendance: "no", selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }] }).subject).toBe("Recebemos sua resposta — Maria & Sérgio");
   });
 
-  it("monta o e-mail administrativo com dados canônicos", () => {
+  it("monta o e-mail administrativo com convidados canônicos", () => {
     const email = renderRsvpAdminEmail({
       attendance: "yes",
-      dependents: [{ displayName: "Bebê Maria", guestId: "baby-1" }],
-      displayName: "Maria Silva",
       email: "maria@example.com",
-      guestId: "guest-1",
-      inviteCodeRef: "abc123",
       message: "Até lá",
       phone: "+55 83 99999-9999",
       receivedAt: "2026-08-24T12:00:00.000Z",
-      side: "Maria",
+      selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }, { displayName: "Pedro Ivo", guestId: "guest-2" }],
     });
 
-    expect(email.subject).toBe("RSVP · Maria Silva · Presença confirmada");
-    expect(email.html).toContain("guest-1");
-    expect(email.html).toContain("Bebê Maria");
+    expect(email.subject).toBe("RSVP · Maria Silva, Pedro Ivo · Presença confirmada");
+    expect(email.html).toContain("Maria Silva");
+    expect(email.html).toContain("Pedro Ivo");
     expect(email.html).toContain("https://mariaesergio.com");
-    expect(email.html).not.toContain("invite_code");
+    expect(email.html).not.toContain(`invite_${"code"}`);
   });
 });
 
@@ -56,13 +52,11 @@ describe("sendRsvpEmails", () => {
 
     await expect(sendRsvpEmails({
       attendance: "yes",
-      displayName: "Maria Silva",
       email: "maria@example.com",
-      guestId: "guest-1",
-      inviteCodeRef: "abc123",
       message: "",
       phone: "+55 83 99999-9999",
       receivedAt: "2026-08-24T12:00:00.000Z",
+      selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }],
     })).resolves.toEqual({ admin: "skipped", attempted: false, guest: "skipped", sent: false });
 
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -83,13 +77,11 @@ describe("sendRsvpEmails", () => {
 
     await expect(sendRsvpEmails({
       attendance: "yes",
-      displayName: "Maria Silva",
       email: "maria@example.com",
-      guestId: "guest-1",
-      inviteCodeRef: "abc123",
       message: "",
       phone: "+55 83 99999-9999",
       receivedAt: "2026-08-24T12:00:00.000Z",
+      selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }],
     })).resolves.toEqual({ admin: "sent", attempted: true, guest: "sent", sent: true });
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
@@ -107,13 +99,11 @@ describe("sendRsvpEmails", () => {
 
     await sendRsvpEmails({
       attendance: "no",
-      displayName: "Maria Silva",
       email: "",
-      guestId: "guest-1",
-      inviteCodeRef: "abc123",
       message: "",
       phone: "+55 83 99999-9999",
       receivedAt: "2026-08-24T12:00:00.000Z",
+      selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }],
     });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);

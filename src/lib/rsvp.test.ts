@@ -5,10 +5,9 @@ import { submitRsvp, type RsvpPayload } from "./rsvp";
 const payload: RsvpPayload = {
   attendance: "yes",
   email: "maria@example.com",
-  guestId: "guest-1",
-  inviteCode: "invite-1234567890",
   message: "",
   phone: "+55 83 99999-9999",
+  selectedGuestIds: ["guest-1"],
 };
 
 afterEach(() => {

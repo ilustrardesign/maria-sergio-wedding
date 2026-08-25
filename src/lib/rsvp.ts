@@ -1,4 +1,4 @@
-import type { RsvpSubmissionPayload } from "@/lib/invite";
+import type { RsvpSubmissionPayload } from "@/lib/guests";
 
 export type RsvpPayload = RsvpSubmissionPayload;
 
@@ -6,10 +6,7 @@ export type RsvpResult =
   | { mode: "demo"; submitted: false }
   | { mode: "endpoint"; submitted: true };
 
-export async function submitRsvp(
-  payload: RsvpPayload,
-  endpoint = "/api/rsvp",
-): Promise<RsvpResult> {
+export async function submitRsvp(payload: RsvpPayload, endpoint = "/api/rsvp"): Promise<RsvpResult> {
   if (!endpoint) return { mode: "demo", submitted: false };
 
   const response = await fetch(endpoint, {

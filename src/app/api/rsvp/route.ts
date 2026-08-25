@@ -1,38 +1,21 @@
-import crypto from "node:crypto";
-
 import { NextResponse } from "next/server";
 
-import { canSubmitInvite, isValidInviteCodeFormat, normalizeInviteCode, type InternalInviteRecord, type RsvpSubmissionPayload } from "@/lib/invite";
 import { sendRsvpEmails } from "@/lib/resend";
+import { cleanText, type GuestSelection, type RsvpSubmissionPayload } from "@/lib/guests";
 
 export const runtime = "nodejs";
 
-type AppsScriptLookupResponse = {
-  active?: boolean;
-  displayName?: string;
-  dependents?: Array<{
-    displayName?: string;
-    guestId?: string;
-  }>;
-  guestId?: string;
-  needsReview?: boolean;
-  ok?: boolean;
-  rsvpRequired?: boolean;
-  side?: string;
-};
-
 type AppsScriptSubmitResponse = {
   id?: string;
+  message?: string;
   ok?: boolean;
+  receivedAt?: string;
+  selectedGuests?: GuestSelection[];
 };
 
-const genericFailure = "Não foi possível registrar este convite agora. Tente novamente em instantes.";
-const lookupFailure = "Não encontramos este convite. Confira o código ou fale conosco.";
-const inviteRateLimit = new Map<string, { count: number; resetAt: number }>();
-
-function cleanString(value: unknown, maxLength: number) {
-  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
-}
+const genericFailure = "Não foi possível registrar esta confirmação agora. Tente novamente em instantes.";
+const configFailure = "O canal de confirmação ainda não está configurado.";
+const rateLimit = new Map<string, { count: number; resetAt: number }>();
 
 function clientKey(request: Request) {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || "unknown";
@@ -43,9 +26,9 @@ function allowAttempt(request: Request) {
   const now = Date.now();
   const windowMs = 60_000;
   const maxAttempts = 12;
-  const bucket = inviteRateLimit.get(key);
+  const bucket = rateLimit.get(key);
   if (!bucket || bucket.resetAt <= now) {
-    inviteRateLimit.set(key, { count: 1, resetAt: now + windowMs });
+    rateLimit.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }
   if (bucket.count >= maxAttempts) return false;
@@ -62,56 +45,30 @@ async function parseJson(request: Request) {
 }
 
 function getAppsScriptConfig() {
-  const appsScriptUrl = process.env.RSVP_APPS_SCRIPT_URL?.trim();
-  const sharedSecret = process.env.RSVP_SHARED_SECRET?.trim();
-  return { appsScriptUrl, sharedSecret };
+  return {
+    appsScriptUrl: process.env.RSVP_APPS_SCRIPT_URL?.trim(),
+    sharedSecret: process.env.RSVP_SHARED_SECRET?.trim(),
+  };
 }
 
-function inviteCodeRef(inviteCode: string) {
-  return crypto.createHash("sha256").update(inviteCode).digest("hex").slice(0, 12);
-}
-
-async function lookupInviteRecord(inviteCode: string) {
-  const { appsScriptUrl, sharedSecret } = getAppsScriptConfig();
-  if (!appsScriptUrl || !sharedSecret) return { ok: false as const, message: "O canal de convite ainda não está configurado." };
-
-  const response = await fetch(appsScriptUrl, {
-    body: JSON.stringify({
-      action: "lookup",
-      inviteCode,
-      secret: sharedSecret,
-      source: "maria-sergio-site",
-    }),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  });
-
-  const result = (await response.json().catch(() => ({}))) as AppsScriptLookupResponse;
-  if (!response.ok || result.ok === false || !result.guestId || !result.displayName) {
-    return { ok: false as const, message: lookupFailure };
-  }
+function sanitizePayload(body: Partial<RsvpSubmissionPayload> & { selectedGuestIds?: unknown }) {
+  const selectedGuestIds = Array.isArray(body.selectedGuestIds)
+    ? body.selectedGuestIds.map((guestId) => cleanText(guestId, 120)).filter(Boolean)
+    : [];
+  const attendance = body.attendance === "yes" || body.attendance === "no" ? body.attendance : "yes";
 
   return {
-    ok: true as const,
-    record: {
-      active: Boolean(result.active),
-      displayName: result.displayName,
-      dependents: Array.isArray(result.dependents)
-        ? result.dependents
-            .filter((dependent) => dependent && typeof dependent.guestId === "string" && typeof dependent.displayName === "string")
-            .map((dependent) => ({ displayName: dependent.displayName ?? "", guestId: dependent.guestId ?? "" }))
-        : [],
-      guestId: result.guestId,
-      needsReview: Boolean(result.needsReview),
-      rsvpRequired: Boolean(result.rsvpRequired),
-      side: result.side,
-    } satisfies InternalInviteRecord,
-  };
+    attendance,
+    email: cleanText(body.email, 160),
+    message: cleanText(body.message, 800),
+    phone: cleanText(body.phone, 25),
+    selectedGuestIds,
+  } satisfies RsvpSubmissionPayload;
 }
 
 export async function POST(request: Request) {
   if (!allowAttempt(request)) {
-    return NextResponse.json({ message: lookupFailure }, { status: 429 });
+    return NextResponse.json({ message: genericFailure }, { status: 429 });
   }
 
   const body = await parseJson(request);
@@ -119,40 +76,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Dados inválidos." }, { status: 400 });
   }
 
-  const source = body as Partial<RsvpSubmissionPayload> & { inviteCode?: unknown };
-  if (source.attendance !== "yes" && source.attendance !== "no") {
-    return NextResponse.json({ message: "Preencha os dados obrigatórios." }, { status: 400 });
-  }
-  const payload: RsvpSubmissionPayload = {
-    attendance: source.attendance,
-    email: cleanString(source.email, 160),
-    guestId: cleanString(source.guestId, 120),
-    inviteCode: normalizeInviteCode(cleanString(source.inviteCode, 128)),
-    message: cleanString(source.message, 800),
-    phone: cleanString(source.phone, 25),
-  };
-
-  if (!payload.inviteCode || !isValidInviteCodeFormat(payload.inviteCode)) {
-    return NextResponse.json({ message: lookupFailure }, { status: 400 });
-  }
-
-  if (!payload.guestId || !payload.phone) {
+  if (body.attendance !== "yes" && body.attendance !== "no") {
     return NextResponse.json({ message: "Preencha os dados obrigatórios." }, { status: 400 });
   }
 
-  const lookup = await lookupInviteRecord(payload.inviteCode);
-  if (!lookup.ok) {
-    return NextResponse.json({ message: lookup.message }, { status: 404 });
-  }
-
-  const validation = canSubmitInvite(lookup.record, payload.guestId, payload.inviteCode);
-  if (!validation.ok) {
-    return NextResponse.json({ message: validation.message ?? lookupFailure }, { status: 400 });
+  const payload = sanitizePayload(body as Partial<RsvpSubmissionPayload> & { selectedGuestIds?: unknown });
+  if (!payload.phone || payload.selectedGuestIds.length === 0) {
+    return NextResponse.json({ message: "Selecione pelo menos um convidado." }, { status: 400 });
   }
 
   const { appsScriptUrl, sharedSecret } = getAppsScriptConfig();
   if (!appsScriptUrl || !sharedSecret) {
-    return NextResponse.json({ message: genericFailure }, { status: 503 });
+    return NextResponse.json({ message: configFailure }, { status: 503 });
   }
 
   const receivedAt = new Date().toISOString();
@@ -161,11 +96,10 @@ export async function POST(request: Request) {
       action: "submit",
       attendance: payload.attendance,
       email: payload.email,
-      guestId: payload.guestId,
-      inviteCode: payload.inviteCode,
       message: payload.message,
       phone: payload.phone,
       receivedAt,
+      selectedGuestIds: payload.selectedGuestIds,
       secret: sharedSecret,
       source: "maria-sergio-site",
     }),
@@ -174,29 +108,35 @@ export async function POST(request: Request) {
   });
 
   const submitResult = (await submitResponse.json().catch(() => ({}))) as AppsScriptSubmitResponse;
-  if (!submitResponse.ok || submitResult.ok === false) {
+  if (!submitResponse.ok || submitResult.ok === false || !Array.isArray(submitResult.selectedGuests)) {
+    const status = submitResult.ok === false
+      ? 400
+      : (submitResponse.ok ? 400 : (submitResponse.status >= 400 ? submitResponse.status : 502));
+    return NextResponse.json(
+      { message: submitResult.message || genericFailure },
+      { status },
+    );
+  }
+
+  const selectedGuests = submitResult.selectedGuests.filter((guest): guest is GuestSelection => Boolean(guest) && typeof guest.guestId === "string" && typeof guest.displayName === "string");
+  if (selectedGuests.length === 0) {
     return NextResponse.json({ message: genericFailure }, { status: 502 });
   }
 
   const emailResult = await sendRsvpEmails({
     attendance: payload.attendance,
-    dependents: lookup.record.dependents,
-    displayName: lookup.record.displayName,
     email: payload.email,
-    guestId: payload.guestId,
-    inviteCodeRef: inviteCodeRef(payload.inviteCode),
     message: payload.message,
     phone: payload.phone,
-    receivedAt,
-    side: lookup.record.side,
+    receivedAt: submitResult.receivedAt ?? receivedAt,
+    selectedGuests,
   });
 
   if (emailResult.admin !== "sent" || emailResult.guest === "failed") {
     console.error("RSVP email delivery status", {
       admin: emailResult.admin,
       guest: emailResult.guest,
-      guestId: payload.guestId,
-      inviteCodeRef: inviteCodeRef(payload.inviteCode),
+      selectedGuestIds: selectedGuests.map((guest) => guest.guestId),
     });
   }
 

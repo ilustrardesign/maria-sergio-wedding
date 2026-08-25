@@ -172,10 +172,6 @@
 }
 
 .inviteLookup {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem 1.1rem;
-  align-items: end;
   margin-bottom: 2rem;
 }
 
@@ -263,6 +259,159 @@
 
 .readOnlyCard input {
   margin-top: 0.55rem;
+}
+
+.guestField {
+  position: relative;
+  min-width: 0;
+}
+
+.guestCombobox {
+  position: relative;
+  min-width: 0;
+}
+
+.selectedGuestWrap {
+  display: flex;
+  min-height: 3.25rem;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding: 0.52rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 32%, transparent);
+  background: rgb(255 255 255 / 38%);
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease;
+}
+
+.selectedGuestWrap:focus-within {
+  border-color: var(--color-olive-dark);
+  background: var(--color-warm-white);
+  box-shadow: 0 0 0 3px rgb(116 123 85 / 16%);
+}
+
+.selectedGuestWrap input {
+  flex: 1 1 11rem;
+  min-width: 11rem;
+  min-height: 2.1rem;
+  padding: 0.25rem 0.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-charcoal);
+  font-family: var(--font-functional);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.selectedGuestWrap input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.guestChip {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.5rem 0.42rem 0.72rem;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 26%, transparent);
+  background: color-mix(in srgb, var(--color-sage) 18%, var(--color-warm-white));
+  color: var(--color-olive-dark);
+}
+
+.guestChipLabel {
+  overflow: hidden;
+  max-width: 14rem;
+  font-family: var(--font-functional);
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guestChipRemove {
+  display: inline-grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.guestChipRemove:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+.guestListbox {
+  position: absolute;
+  z-index: 6;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  left: 0;
+  margin: 0;
+  padding: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 28%, transparent);
+  background: var(--color-warm-white);
+  box-shadow: 0 1.1rem 2.6rem rgb(55 56 48 / 14%);
+  list-style: none;
+}
+
+.guestOption,
+.guestOptionActive {
+  display: flex;
+  min-height: 2.85rem;
+  align-items: center;
+  padding: 0.55rem 0.72rem;
+  color: var(--color-charcoal);
+  cursor: pointer;
+}
+
+.guestOptionActive {
+  background: color-mix(in srgb, var(--color-sage) 24%, var(--color-warm-white));
+}
+
+.guestOption:hover {
+  background: color-mix(in srgb, var(--color-sage) 18%, var(--color-warm-white));
+}
+
+.guestOptionName {
+  overflow: hidden;
+  font-family: var(--font-reading);
+  font-size: 0.96rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guestStatus {
+  margin: 0.45rem 0 0;
+  color: var(--color-warm-gray);
+  font-family: var(--font-functional);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.guestStatus.loading,
+.guestStatus.results {
+  color: var(--color-olive);
+}
+
+.guestStatus.empty,
+.guestStatus.to-short {
+  color: var(--color-warm-gray);
+}
+
+.guestStatus.error {
+  color: var(--color-error);
 }
 
 .cardLabel {
@@ -415,10 +564,6 @@
   font-family: var(--font-reading);
   font-size: 0.96rem;
   line-height: 1.35;
-}
-
-.guestField input {
-  max-width: 9rem;
 }
 
 .messageField {

@@ -22,164 +22,124 @@ function basePayload(overrides: Record<string, unknown> = {}) {
   return {
     attendance: "yes",
     email: "maria@example.com",
-    guestId: "guest-1",
-    inviteCode: "invite_1234567890",
     message: "",
     phone: "+55 83 99999-9999",
+    selectedGuestIds: ["guest-pedro"],
     ...overrides,
   };
 }
 
 describe("POST /api/rsvp", () => {
-  it("rejeita código inválido sem consultar Apps Script", async () => {
+  it("rejeita submissão sem convidados", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await POST(request(basePayload({ inviteCode: "bad" })));
-    const json = await response.json();
-
+    const response = await POST(request(basePayload({ selectedGuestIds: [] })));
     expect(response.status).toBe(400);
-    expect(json).toEqual({ message: "Não encontramos este convite. Confira o código ou fale conosco." });
+    expect(await response.json()).toEqual({ message: "Selecione pelo menos um convidado." });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("rejeita guestId diferente do registro canônico", async () => {
+  it("aceita convidados válidos e envia somente IDs", async () => {
     process.env = {
       ...originalEnv,
+      RESEND_ADMIN_EMAILS: "admin@example.com",
+      RESEND_API_KEY: "test-key",
+      RESEND_ENABLED: "true",
       RSVP_APPS_SCRIPT_URL: "https://script.example.test/exec",
       RSVP_SHARED_SECRET: "secret",
     };
-    const fetchSpy = vi.fn().mockResolvedValueOnce({
-      json: () => Promise.resolve({
-        active: true,
-        displayName: "Maria Silva",
-        guestId: "guest-1",
-        needsReview: false,
+
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce({
+        json: () => Promise.resolve({
+          id: "row-1",
+          ok: true,
+          receivedAt: "2026-08-24T12:00:00.000Z",
+          selectedGuests: [{ displayName: "Pedro Ivo", guestId: "guest-pedro" }],
+        }),
         ok: true,
-        rsvpRequired: true,
-      }),
-      ok: true,
-    });
-    vi.stubGlobal("fetch", fetchSpy);
-
-    const response = await POST(request(basePayload({ guestId: "guest-2" })));
-    const json = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(json).toEqual({ message: "Não encontramos este convite. Confira o código ou fale conosco." });
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("rejeita convites inativos e não tenta persistir", async () => {
-    process.env = {
-      ...originalEnv,
-      RSVP_APPS_SCRIPT_URL: "https://script.example.test/exec",
-      RSVP_SHARED_SECRET: "secret",
-    };
-    const fetchSpy = vi.fn().mockResolvedValueOnce({
-      json: () => Promise.resolve({
-        active: false,
-        displayName: "Maria Silva",
-        guestId: "guest-1",
-        needsReview: false,
-        ok: true,
-        rsvpRequired: true,
-      }),
-      ok: true,
-    });
+      })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: true });
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await POST(request(basePayload()));
     const json = await response.json();
 
+    expect(response.ok).toBe(true);
+    expect(json).toEqual({ id: "row-1", submitted: true });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+    const submitCall = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
+    expect(submitCall).toMatchObject({
+      attendance: "yes",
+      email: "maria@example.com",
+      message: "",
+      phone: "+55 83 99999-9999",
+      selectedGuestIds: ["guest-pedro"],
+    });
+    expect(submitCall).not.toHaveProperty(`guest${"Names"}`);
+    expect(submitCall).not.toHaveProperty("displayName");
+  });
+
+  it("rejeita guest fake e não envia e-mails", async () => {
+    process.env = {
+      ...originalEnv,
+      RSVP_APPS_SCRIPT_URL: "https://script.example.test/exec",
+      RSVP_SHARED_SECRET: "secret",
+    };
+
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      json: () => Promise.resolve({ ok: false, message: "Convidado inválido." }),
+      ok: false,
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await POST(request(basePayload({ selectedGuestIds: ["guest-fake"] })));
+    const json = await response.json();
+
     expect(response.status).toBe(400);
-    expect(json).toEqual({ message: "Não encontramos este convite. Confira o código ou fale conosco." });
+    expect(json).toEqual({ message: "Convidado inválido." });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("persiste antes de enviar e-mail e não expõe segredos", async () => {
+  it("rejeita mistura de ID válido com inválido", async () => {
     process.env = {
       ...originalEnv,
-      RESEND_ADMIN_EMAILS: "admin@example.com",
-      RESEND_API_KEY: "test-key",
-      RESEND_ENABLED: "true",
       RSVP_APPS_SCRIPT_URL: "https://script.example.test/exec",
       RSVP_SHARED_SECRET: "secret",
     };
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const fetchSpy = vi
-      .fn()
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({
-          active: true,
-          displayName: "Maria Silva",
-          dependents: [{ displayName: "Bebê Maria", guestId: "baby-1" }],
-          guestId: "guest-1",
-          needsReview: false,
-          ok: true,
-          rsvpRequired: true,
-          side: "Maria",
-        }),
-        ok: true,
-      })
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({ id: "row-1", ok: true }),
-        ok: true,
-      })
-      .mockResolvedValueOnce({ ok: false })
-      .mockResolvedValueOnce({ ok: true });
+
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      json: () => Promise.resolve({ ok: false, message: "Convidado inválido." }),
+      ok: false,
+    });
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await POST(request(basePayload({ email: "maria@example.com" })));
-    const json = await response.json();
-
-    expect(response.ok).toBe(true);
-    expect(json).toEqual({ id: "row-1", submitted: true });
-    expect(fetchSpy).toHaveBeenCalledTimes(4);
-    const submitCall = JSON.parse(String(fetchSpy.mock.calls[1][1]?.body));
-    expect(submitCall).not.toHaveProperty("displayName");
-    expect(submitCall).not.toHaveProperty("guestNames");
-    expect(String(consoleSpy.mock.calls[0]?.[1]?.inviteCodeRef ?? "")).not.toContain("invite_1234567890");
-    consoleSpy.mockRestore();
+    const response = await POST(request(basePayload({ selectedGuestIds: ["guest-pedro", "guest-fake"] })));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ message: "Convidado inválido." });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("continua submetendo mesmo quando o e-mail do convidado falha", async () => {
+  it("rejeita IDs de criança, inativo e needs_review", async () => {
     process.env = {
       ...originalEnv,
-      RESEND_ADMIN_EMAILS: "admin@example.com",
-      RESEND_API_KEY: "test-key",
-      RESEND_ENABLED: "true",
       RSVP_APPS_SCRIPT_URL: "https://script.example.test/exec",
       RSVP_SHARED_SECRET: "secret",
     };
-    const fetchSpy = vi
-      .fn()
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({
-          active: true,
-          displayName: "Maria Silva",
-          dependents: [{ displayName: "Bebê Maria", guestId: "baby-1" }],
-          guestId: "guest-1",
-          needsReview: false,
-          ok: true,
-          rsvpRequired: true,
-          side: "Maria",
-        }),
-        ok: true,
-      })
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve({ id: "row-1", ok: true }),
-        ok: true,
-      })
-      .mockResolvedValueOnce({ ok: true })
-      .mockResolvedValueOnce({ ok: false });
+
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      json: () => Promise.resolve({ ok: false, message: "Convidado inválido." }),
+      ok: false,
+    });
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await POST(request(basePayload({ email: "maria@example.com" })));
-    const json = await response.json();
-
-    expect(response.ok).toBe(true);
-    expect(json).toEqual({ id: "row-1", submitted: true });
-    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    const response = await POST(request(basePayload({ selectedGuestIds: ["guest-lucas"] })));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ message: "Convidado inválido." });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,27 +1,28 @@
-# RSVP Guest Validation Architecture
+# RSVP Guest Validation
 
-## A) Current Free Form
+The RSVP now works through a private guest registry and server-side search.
 
-The current form lets guests type their names and companions freely. This is flexible and handles real cases well: changed companions, couples, children, guests without email, declined invitations, and spelling variations. The tradeoff is manual reconciliation in the Google Sheet.
+## Rules
 
-## B) Invite Or Family Code
+- The browser only receives `guestId` and `displayName` from search.
+- Free text cannot become a guest tag.
+- Children are excluded from search and submission.
+- Every submitted `guestId` is revalidated on the server before persistence.
+- The browser never receives the full registry.
 
-An invite code can identify a household or group without exposing the guest list in the browser. The form can collect `inviteCode`, `primaryName`, attendance, companion names, and message. The backend validates the code and max guest count server-side before writing to the Google Sheet.
+## Flow
 
-This handles shared family invitations and avoids hardcoding names in the frontend bundle. It still needs a graceful path for typos, lost codes, and last-minute companion changes.
+1. User types a query.
+2. The server returns up to 8 matching guests.
+3. User selects only returned results.
+4. The browser submits `attendance`, `selectedGuestIds`, `phone`, `email`, and `message`.
+5. The server validates each `guestId` again and writes canonical names to Sheets.
 
-## C) Server-Side Google Sheet Lookup
+## Rejection cases
 
-A second Google Sheet tab can store invitation records:
-
-- `inviteCode`
-- `primaryName`
-- `maxGuests`
-- `groupName`
-- optional notes/status
-
-The Next.js `/api/rsvp` route or Apps Script validates against that tab server-side, then writes the RSVP row. The browser never receives the complete guest list.
-
-## Recommendation
-
-If guest validation is added later, use server-side lookup with `inviteCode`, `primaryName`, and `maxGuests`. Keep a manual review path for spelling errors, companion swaps, couples, children, guests without email, and declined invitations. Do not hardcode a guest list in frontend code or ship it in the browser bundle.
+- unknown guest IDs
+- inactive guests
+- `needs_review=true`
+- `rsvp_required=false`
+- duplicate guest IDs
+- empty selection

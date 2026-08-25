@@ -1,31 +1,25 @@
 const GUEST_HEADERS = [
   "guest_id",
-  "guardian_guest_id",
   "side",
   "raw_name",
   "display_name",
-  "is_baby",
+  "is_child",
   "rsvp_required",
-  "invite_code",
-  "invite_url",
   "active",
   "needs_review",
+  "guardian_guest_id",
   "notes",
   "created_at",
 ];
 
 const RESPONSE_HEADERS = [
   "received_at",
-  "guest_id",
-  "display_name",
-  "invite_code_ref",
   "attendance",
+  "selected_guest_ids",
+  "selected_guest_display_names",
   "phone",
   "email",
   "message",
-  "side",
-  "dependent_guest_ids",
-  "dependent_display_names",
   "submitted",
   "notes",
 ];
@@ -33,6 +27,8 @@ const RESPONSE_HEADERS = [
 const SPREADSHEET_NAME = "RSVP - Casamento Maria e Sérgio - 31-10-2026";
 const GUEST_SHEET_NAME = "Convidados";
 const RESPONSE_SHEET_NAME = "RSVP";
+const MAX_SEARCH_RESULTS = 8;
+const MIN_SEARCH_CHARS = 2;
 
 function setup() {
   return setupGuestsSheet();
@@ -64,87 +60,24 @@ function normalizeGuestRegistry() {
 
   const rows = readSheetRows_(sheet, GUEST_HEADERS);
   const now = new Date().toISOString();
-  const baseRows = rows.map((row) => {
+  const normalizedRows = rows.map((row) => {
     const rawName = clean_(row.raw_name, 180);
-    const displayName = normalizeDisplayName_(row.display_name || rawName);
-    const isBaby = /\*$/.test(rawName);
-
-    return {
-      active: toBoolean_(row.active, true),
-      created_at: clean_(row.created_at, 80) || now,
-      display_name: displayName,
-      guardian_guest_id: clean_(row.guardian_guest_id, 80),
-      guest_id: clean_(row.guest_id, 80) || generateToken_(),
-      invite_code: isBaby ? "" : clean_(row.invite_code, 120),
-      invite_url: "",
-      is_baby: isBaby,
-      needs_review: toBoolean_(row.needs_review, false),
-      notes: clean_(row.notes, 500),
-      raw_name: rawName,
-      rsvp_required: !isBaby,
-      side: clean_(row.side, 40),
-    };
-  });
-
-  const displayCounts = {};
-  baseRows.forEach((row) => {
-    if (!row.display_name) return;
-    displayCounts[row.display_name] = (displayCounts[row.display_name] || 0) + 1;
-  });
-
-  const guestIds = {};
-  baseRows.forEach((row) => {
-    guestIds[row.guest_id] = true;
-  });
-
-  const adultEligibleIds = {};
-  baseRows.forEach((row) => {
-    const isEligibleAdult =
-      !row.is_baby &&
-      row.active &&
-      !row.needs_review &&
-      !!row.display_name &&
-      !isPlaceholderName_(row.display_name) &&
-      !row.raw_name.includes("?") &&
-      (!row.display_name || displayCounts[row.display_name] <= 1);
-
-    if (isEligibleAdult) adultEligibleIds[row.guest_id] = true;
-  });
-
-  const reviewRows = [];
-  const normalizedRows = baseRows.map((row, index) => {
-    const reasons = [];
-    if (!row.display_name) reasons.push("nome_vazio");
-    if (/\?/.test(row.raw_name)) reasons.push("nome_com_interrogacao");
-    if (isPlaceholderName_(row.display_name)) reasons.push("placeholder");
-    if (row.display_name && displayCounts[row.display_name] > 1) reasons.push("duplicado_exato");
-
-    const guardianInvalid = row.is_baby && (!row.guardian_guest_id || !guestIds[row.guardian_guest_id] || !adultEligibleIds[row.guardian_guest_id]);
-    if (row.is_baby && !row.guardian_guest_id) reasons.push("guardian_ausente");
-    if (guardianInvalid) reasons.push("guardian_invalido");
-
-    const needsReview = row.needs_review || reasons.length > 0;
-    if (needsReview) {
-      reviewRows.push({ reasons: reasons.slice(), row: index + 2 });
-    }
-
-    const inviteCode = row.is_baby ? "" : row.invite_code;
-    const inviteUrl = row.is_baby ? "" : createInviteUrl_(inviteCode);
+    const isChild = toBoolean_(row.is_child, false) || /\*$/.test(rawName);
+    const displayName = clean_(row.display_name, 180) || rawName.replace(/\*+$/g, "").trim();
+    const needsReview = toBoolean_(row.needs_review, false) || !displayName || /\?/.test(rawName) || isPlaceholderName_(displayName);
 
     return [
-      row.guest_id,
-      row.guardian_guest_id,
-      row.side,
-      row.raw_name,
-      row.display_name,
-      row.is_baby ? "TRUE" : "FALSE",
-      row.rsvp_required ? "TRUE" : "FALSE",
-      inviteCode,
-      inviteUrl,
-      needsReview ? "FALSE" : (row.active ? "TRUE" : "FALSE"),
+      clean_(row.guest_id, 80) || generateToken_(),
+      clean_(row.side, 40),
+      rawName,
+      displayName,
+      isChild ? "TRUE" : "FALSE",
+      isChild ? "FALSE" : (toBoolean_(row.rsvp_required, true) ? "TRUE" : "FALSE"),
+      toBoolean_(row.active, true) ? "TRUE" : "FALSE",
       needsReview ? "TRUE" : "FALSE",
-      joinNotes_(reasons, row.notes),
-      row.created_at,
+      clean_(row.guardian_guest_id, 80),
+      clean_(row.notes, 500),
+      clean_(row.created_at, 80) || now,
     ];
   });
 
@@ -152,36 +85,7 @@ function normalizeGuestRegistry() {
     sheet.getRange(2, 1, normalizedRows.length, GUEST_HEADERS.length).setValues(normalizedRows);
   }
 
-  return {
-    ok: true,
-    reviewed: reviewRows.length,
-    reviewRows: reviewRows,
-  };
-}
-
-function generateMissingInviteCodes() {
-  const spreadsheet = getSpreadsheet_();
-  const sheet = getOrCreateSheet_(spreadsheet, GUEST_SHEET_NAME);
-  ensureHeaders_(sheet, GUEST_HEADERS);
-
-  const rows = readSheetRows_(sheet, GUEST_HEADERS);
-  let generated = 0;
-
-  rows.forEach((row, index) => {
-    const inviteCode = clean_(row.invite_code, 120);
-    const rsvpRequired = toBoolean_(row.rsvp_required, false);
-    const needsReview = toBoolean_(row.needs_review, false);
-    const active = toBoolean_(row.active, true);
-    const isBaby = toBoolean_(row.is_baby, false);
-    if (inviteCode || !rsvpRequired || needsReview || !active || isBaby) return;
-
-    const nextCode = generateToken_();
-    sheet.getRange(index + 2, GUEST_HEADERS.indexOf("invite_code") + 1).setValue(nextCode);
-    sheet.getRange(index + 2, GUEST_HEADERS.indexOf("invite_url") + 1).setValue(createInviteUrl_(nextCode));
-    generated += 1;
-  });
-
-  return { ok: true, generated: generated };
+  return { ok: true, normalized: normalizedRows.length };
 }
 
 function doPost(e) {
@@ -195,7 +99,7 @@ function doPost(e) {
     }
 
     const action = clean_(body.action, 16);
-    if (action === "lookup") return handleLookup_(body);
+    if (action === "search") return handleSearch_(body);
     if (action === "submit") return handleSubmit_(body);
 
     return json_({ ok: false, message: "Ação inválida." }, 400);
@@ -204,32 +108,19 @@ function doPost(e) {
   }
 }
 
-function handleLookup_(body) {
+function handleSearch_(body) {
+  const query = clean_(body.query, 80);
+  if (normalizeForSearch_(query).length < MIN_SEARCH_CHARS) {
+    return json_({ ok: true, guests: [] });
+  }
+
   const spreadsheet = getSpreadsheet_();
   const sheet = getOrCreateSheet_(spreadsheet, GUEST_SHEET_NAME);
   ensureHeaders_(sheet, GUEST_HEADERS);
 
-  const inviteCode = clean_(body.inviteCode, 120);
   const rows = readSheetRows_(sheet, GUEST_HEADERS);
-  const record = findGuestByInviteCode_(rows, inviteCode);
-  if (!record) {
-    return json_({ ok: false, message: "Não encontrado." }, 404);
-  }
-
-  const dependents = findDependentsForGuardian_(rows, record.guest_id);
-  return json_({
-    ok: true,
-    active: record.active,
-    displayName: record.display_name,
-    dependents: dependents.map((dependent) => ({
-      displayName: dependent.display_name,
-      guestId: dependent.guest_id,
-    })),
-    guestId: record.guest_id,
-    needsReview: record.needs_review,
-    rsvpRequired: record.rsvp_required,
-    side: record.side,
-  });
+  const results = searchGuests_(rows, query);
+  return json_({ ok: true, guests: results });
 }
 
 function handleSubmit_(body) {
@@ -239,108 +130,98 @@ function handleSubmit_(body) {
   ensureHeaders_(guestsSheet, GUEST_HEADERS);
   ensureHeaders_(responsesSheet, RESPONSE_HEADERS);
 
-  const inviteCode = clean_(body.inviteCode, 120);
-  const guestId = clean_(body.guestId, 80);
+  const selectedGuestIds = Array.isArray(body.selectedGuestIds)
+    ? body.selectedGuestIds.map((guestId) => clean_(guestId, 80)).filter(Boolean)
+    : [];
   const attendance = clean_(body.attendance, 4);
   const phone = clean_(body.phone, 30);
   const email = clean_(body.email, 160);
   const message = clean_(body.message, 800);
   const receivedAt = clean_(body.receivedAt, 80) || new Date().toISOString();
 
-  if (!inviteCode || !guestId || !phone || (attendance !== "yes" && attendance !== "no")) {
+  if (selectedGuestIds.length === 0 || !phone || (attendance !== "yes" && attendance !== "no")) {
     return json_({ ok: false, message: "Campos obrigatórios ausentes." }, 400);
   }
 
   const guestRows = readSheetRows_(guestsSheet, GUEST_HEADERS);
-  const guest = findGuestByInviteCode_(guestRows, inviteCode);
-  if (!guest) {
-    return json_({ ok: false, message: "Não encontrado." }, 404);
+  const validation = validateSelectedGuestIds_(guestRows, selectedGuestIds);
+  if (!validation.ok) {
+    return json_({ ok: false, message: "Convidado inválido." }, 400);
   }
 
-  if (!guest.active || guest.needs_review || !guest.rsvp_required || guest.guest_id !== guestId) {
-    return json_({ ok: false, message: "Convite inválido." }, 400);
-  }
-
-  const inviteCodeRef = hashInviteCode_(inviteCode);
-  const dependents = findDependentsForGuardian_(guestRows, guest.guest_id);
   responsesSheet.appendRow([
     receivedAt,
-    guest.guest_id,
-    guest.display_name,
-    inviteCodeRef,
     attendance,
+    validation.selectedGuests.map((guest) => guest.guestId).join(","),
+    validation.selectedGuests.map((guest) => guest.displayName).join(", "),
     phone,
     email,
     message,
-    guest.side,
-    dependents.map((dependent) => dependent.guest_id).join(","),
-    dependents.map((dependent) => dependent.display_name).join(", "),
     "TRUE",
     "",
   ]);
 
-  const notificationEmails = propertiesValue_("RSVP_NOTIFICATION_EMAILS");
-  const mailAppEnabled = propertiesValue_("RSVP_MAILAPP_ENABLED") !== "false";
-  if (mailAppEnabled && notificationEmails) {
-    MailApp.sendEmail({
-      to: notificationEmails,
-      replyTo: email || undefined,
-      subject: "RSVP · " + guest.display_name + " · " + (attendance === "yes" ? "Presença confirmada" : "Não comparecerá"),
-      body: [
-        "Nome canonical: " + guest.display_name,
-        "Lado: " + (guest.side || "-"),
-        "Presença: " + (attendance === "yes" ? "Sim, estará presente" : "Não poderá comparecer"),
-        "Dependentes: " + (dependents.length > 0 ? dependents.map((dependent) => dependent.display_name).join(", ") : "-"),
-        "Telefone: " + phone,
-        "Email: " + (email || "-"),
-        "Recadinho: " + (message || "-"),
-        "Guest ID: " + guest.guest_id,
-        "Invite ref: " + inviteCodeRef,
-        "Data/hora: " + receivedAt,
-      ].join("\n"),
+  return json_({
+    ok: true,
+    submitted: true,
+    id: generateToken_(),
+    receivedAt: receivedAt,
+    selectedGuests: validation.selectedGuests,
+  });
+}
+
+function searchGuests_(rows, query) {
+  const normalizedQuery = normalizeForSearch_(query);
+  return rows
+    .filter(isSelectableGuest_)
+    .map((row) => {
+      const displayName = clean_(row.display_name, 180);
+      const rawName = clean_(row.raw_name, 180);
+      const searchable = normalizeForSearch_(displayName + " " + rawName);
+      return {
+        displayName: displayName,
+        guestId: clean_(row.guest_id, 80),
+        score: searchable.indexOf(normalizedQuery),
+      };
+    })
+    .filter((row) => row.guestId && row.displayName && row.score >= 0)
+    .sort((a, b) => a.score - b.score || a.displayName.localeCompare(b.displayName))
+    .slice(0, MAX_SEARCH_RESULTS)
+    .map((row) => ({ guestId: row.guestId, displayName: row.displayName }));
+}
+
+function validateSelectedGuestIds_(rows, selectedGuestIds) {
+  const seen = {};
+  const selectedGuests = [];
+
+  for (let index = 0; index < selectedGuestIds.length; index += 1) {
+    const guestId = selectedGuestIds[index];
+    if (!guestId || seen[guestId]) return { ok: false };
+    seen[guestId] = true;
+
+    const guest = rows.find((row) => clean_(row.guest_id, 80) === guestId);
+    if (!guest || !isSelectableGuest_(guest)) return { ok: false };
+
+    selectedGuests.push({
+      guestId: clean_(guest.guest_id, 80),
+      displayName: clean_(guest.display_name, 180),
     });
   }
 
-  return json_({ ok: true, submitted: true, id: guest.guest_id });
+  if (selectedGuests.length === 0) return { ok: false };
+  return { ok: true, selectedGuests: selectedGuests };
 }
 
-function findGuestByInviteCode_(rows, inviteCode) {
-  if (!inviteCode) return null;
-  for (let index = 0; index < rows.length; index += 1) {
-    const row = rows[index];
-    if (clean_(row.invite_code, 120) !== inviteCode) continue;
-    return row;
-  }
-  return null;
-}
-
-function findDependentsForGuardian_(rows, guardianGuestId) {
-  if (!guardianGuestId) return [];
-  const guardian = rows.find((row) => clean_(row.guest_id, 80) === guardianGuestId);
-  if (!guardian || !isEligibleAdultRow_(guardian, rows)) return [];
-  return rows.filter((row) => {
-    const isBaby = toBoolean_(row.is_baby, false);
-    const active = toBoolean_(row.active, true);
-    const needsReview = toBoolean_(row.needs_review, false);
-    return isBaby && active && !needsReview && clean_(row.guardian_guest_id, 80) === guardianGuestId && clean_(row.guest_id, 80) !== guardianGuestId;
-  });
-}
-
-function isEligibleAdultRow_(row, rows) {
-  if (!row || toBoolean_(row.is_baby, false)) return false;
-  if (!toBoolean_(row.active, true) || toBoolean_(row.needs_review, false)) return false;
-  const displayName = clean_(row.display_name, 180);
-  const rawName = clean_(row.raw_name, 180);
-  if (!displayName || isPlaceholderName_(displayName) || rawName.includes("?")) return false;
-
-  const nameCounts = {};
-  rows.forEach((candidate) => {
-    const candidateName = clean_(candidate.display_name || candidate.raw_name, 180);
-    if (!candidateName) return;
-    nameCounts[candidateName] = (nameCounts[candidateName] || 0) + 1;
-  });
-
-  return (nameCounts[displayName] || 0) <= 1;
+function isSelectableGuest_(row) {
+  const isChild = toBoolean_(row.is_child, false) || /\*$/.test(clean_(row.raw_name, 180));
+  return (
+    !isChild &&
+    toBoolean_(row.active, true) &&
+    toBoolean_(row.rsvp_required, false) &&
+    !toBoolean_(row.needs_review, false) &&
+    !!clean_(row.guest_id, 80) &&
+    !!clean_(row.display_name, 180)
+  );
 }
 
 function readSheetRows_(sheet, headers) {
@@ -385,26 +266,14 @@ function clean_(value, maxLength) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
-function normalizeDisplayName_(value) {
-  return clean_(value, 180).replace(/\*+$/g, "").trim();
-}
-
-function createInviteUrl_(inviteCode) {
-  const normalized = clean_(inviteCode, 120);
-  return normalized ? "https://mariaesergio.com/?convite=" + encodeURIComponent(normalized) : "";
+function normalizeForSearch_(value) {
+  return clean_(value, 180).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
 function isPlaceholderName_(value) {
   if (!value) return true;
-  const normalized = value.toLowerCase();
-  return /(\?|^teste$|^teste /|placeholder|convidado|convidada|a confirmar|a definir|sem nome|pendente|nome do convidado|nome do convidada)/i.test(normalized);
-}
-
-function joinNotes_(reasons, existingNotes) {
-  const notes = [];
-  if (existingNotes) notes.push(clean_(existingNotes, 500));
-  if (reasons.length > 0) notes.push("REVIEW: " + reasons.join(","));
-  return notes.filter(Boolean).join(" | ").slice(0, 500);
+  const normalized = normalizeForSearch_(value);
+  return /(\?|^teste$|^teste |placeholder|convidado|convidada|a confirmar|a definir|sem nome|pendente|nome do convidado|nome da convidada)/i.test(normalized);
 }
 
 function toBoolean_(value, defaultValue) {
@@ -415,15 +284,6 @@ function toBoolean_(value, defaultValue) {
 
 function generateToken_() {
   return Utilities.getUuid().replace(/-/g, "").toLowerCase();
-}
-
-function hashInviteCode_(inviteCode) {
-  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, inviteCode, Utilities.Charset.UTF_8);
-  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, "");
-}
-
-function propertiesValue_(key) {
-  return PropertiesService.getScriptProperties().getProperty(key);
 }
 
 function json_(body) {

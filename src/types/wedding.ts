@@ -95,10 +95,13 @@ export interface GalleryItem {
 }
 export interface GalleryConfig { eyebrow: string; title: string; introduction: EditableField<string>; items: GalleryItem[]; }
 export interface RsvpFieldLabels {
-  inviteCode: string;
-  inviteCodeHelp: string;
-  canonicalName: string;
-  canonicalNameHelp: string;
+  guestSearch: string;
+  guestSearchHelp: string;
+  guestSearchLoading: string;
+  guestSearchMinimum: string;
+  guestSearchEmpty: string;
+  guestSearchSelected: string;
+  guestSearchRemove: string;
   phone: string;
   email: string;
   attendance: string;
@@ -112,10 +115,9 @@ export interface RsvpMessages {
   required: string;
   invalidEmail: string;
   invalidPhone: string;
-  inviteRequired: string;
-  invalidInvite: string;
-  inviteLookupFailed: string;
-  inviteResolved: string;
+  guestsRequired: string;
+  guestSearchFailed: string;
+  guestSearchDuplicate: string;
   demo: string;
   success: string;
   endpointMissing: string;
@@ -183,7 +185,7 @@ export interface ClosingConfig {
 }
 export interface PersonalizationConfig {
   enabled: boolean;
-  allowedQueryParameters: { guestName: string; invitationCode: string; maximumCompanions: string; };
+  allowedQueryParameters: { guestName: string; maximumCompanions: string; };
 }
 export interface FeatureFlags {
   showStory: boolean;

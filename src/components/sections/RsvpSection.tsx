@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
-import { lookupInvite, normalizeInviteCode, type InviteLookupResponse, type RsvpSubmissionPayload } from "@/lib/invite";
+import { searchGuests, type GuestSelection, type RsvpSubmissionPayload } from "@/lib/guests";
 import { submitRsvp } from "@/lib/rsvp";
 import type { RsvpMode, WeddingContent } from "@/types/wedding";
 
@@ -12,14 +12,16 @@ type RsvpSectionProps = {
   content: WeddingContent;
 };
 
-type FieldName = "attendance" | "email" | "inviteCode" | "phone";
+type FieldName = "attendance" | "email" | "guests" | "phone";
 type FieldErrors = Partial<Record<FieldName, string>>;
 type SubmissionState = "idle" | "loading" | "demo" | "success" | "error";
-type InviteState = "idle" | "loading" | "valid" | "invalid";
+type SearchState = "idle" | "loading" | "empty" | "error" | "results";
 
-const validationOrder: FieldName[] = ["inviteCode", "attendance", "phone", "email"];
+const validationOrder: FieldName[] = ["guests", "attendance", "phone", "email"];
 
 const fieldErrorId = (field: FieldName) => `rsvp-${field}-error`;
+const guestSearchId = "rsvp-guest-search";
+const guestListboxId = "rsvp-guest-listbox";
 
 function FieldError({ field, message }: { field: FieldName; message?: string }) {
   if (!message) return null;
@@ -36,33 +38,44 @@ function resolveMode(defaultMode: RsvpMode): RsvpMode {
   return configuredMode === "demo" || configuredMode === "endpoint" ? configuredMode : defaultMode;
 }
 
-function firstName(displayName: string) {
-  return displayName.split(/\s+/).filter(Boolean)[0] || displayName;
+function uniqueGuests(guests: GuestSelection[]) {
+  const seen = new Set<string>();
+  return guests.filter((guest) => {
+    if (seen.has(guest.guestId)) return false;
+    seen.add(guest.guestId);
+    return true;
+  });
 }
 
 export function RsvpSection({ content }: RsvpSectionProps) {
   const { rsvp } = content;
   const formRef = useRef<HTMLFormElement>(null);
-  const inviteInputRef = useRef<HTMLInputElement>(null);
-  const [inviteCode, setInviteCode] = useState(() => {
-    if (typeof window === "undefined") return "";
-    const params = new URLSearchParams(window.location.search);
-    return params.get("convite") ?? params.get("invite") ?? "";
-  });
-  const [validatedInviteCode, setValidatedInviteCode] = useState("");
-  const [inviteRecord, setInviteRecord] = useState<InviteLookupResponse | null>(null);
-  const [inviteState, setInviteState] = useState<InviteState>("idle");
+  const guestInputRef = useRef<HTMLInputElement>(null);
   const [attendance, setAttendance] = useState<RsvpSubmissionPayload["attendance"] | "">("");
+  const [selectedGuests, setSelectedGuests] = useState<GuestSelection[]>([]);
+  const [guestQuery, setGuestQuery] = useState("");
+  const [guestOptions, setGuestOptions] = useState<GuestSelection[]>([]);
+  const [guestSearchState, setGuestSearchState] = useState<SearchState>("idle");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submissionState, setSubmissionState] = useState<SubmissionState>("idle");
   const [statusMessage, setStatusMessage] = useState("");
-  const didAutoLookupRef = useRef(false);
-
   const mode = resolveMode(rsvp.defaultMode);
   const isLoading = submissionState === "loading";
-  const normalizedInviteCode = useMemo(() => normalizeInviteCode(inviteCode), [inviteCode]);
-  const activeInvite = inviteRecord?.valid && validatedInviteCode === normalizedInviteCode ? inviteRecord : null;
-  const inviteName = activeInvite?.valid ? firstName(activeInvite.displayName) : "";
+
+  const guestQueryTrimmed = guestQuery.trim();
+  const guestListMessage =
+    guestQueryTrimmed.length === 0
+      ? ""
+      : guestQueryTrimmed.length < 2
+        ? rsvp.labels.guestSearchMinimum
+        : guestSearchState === "loading"
+          ? rsvp.labels.guestSearchLoading
+          : guestSearchState === "empty"
+            ? rsvp.labels.guestSearchEmpty
+            : guestSearchState === "error"
+              ? rsvp.messages.guestSearchFailed
+              : "";
 
   const clearSubmissionMessage = useCallback(() => {
     if (!isLoading && submissionState !== "idle") {
@@ -71,63 +84,79 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     }
   }, [isLoading, submissionState]);
 
-  const performInviteLookup = useCallback(async (rawCode: string) => {
-    const code = normalizeInviteCode(rawCode);
-    setInviteState("loading");
+  const clearFieldError = useCallback((field: FieldName) => {
+    setErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
-    if (!code) {
-      setInviteRecord(null);
-      setValidatedInviteCode("");
-      setInviteState("invalid");
-      setStatusMessage(rsvp.messages.inviteRequired);
-      return null;
+  const removeGuest = useCallback((guestId: string) => {
+    setSelectedGuests((current) => current.filter((guest) => guest.guestId !== guestId));
+    clearFieldError("guests");
+    clearSubmissionMessage();
+  }, [clearFieldError, clearSubmissionMessage]);
+
+  const addGuest = useCallback((guest: GuestSelection) => {
+    const isDuplicate = selectedGuests.some((selected) => selected.guestId === guest.guestId);
+    if (isDuplicate) {
+      setErrors((currentErrors) => ({ ...currentErrors, guests: rsvp.messages.guestSearchDuplicate }));
+      return;
     }
 
-    if (!/^[A-Za-z0-9_-]{12,128}$/.test(code)) {
-      setInviteRecord(null);
-      setValidatedInviteCode("");
-      setInviteState("invalid");
-      setStatusMessage(rsvp.messages.invalidInvite);
-      return null;
-    }
-
-    const result = await lookupInvite(code, "/api/invite/lookup");
-    if (!result.valid) {
-      setInviteRecord(null);
-      setValidatedInviteCode("");
-      setInviteState("invalid");
-      setStatusMessage(result.message || rsvp.messages.invalidInvite);
-      return null;
-    }
-
-    setInviteRecord(result);
-    setValidatedInviteCode(code);
-    setInviteState("valid");
-    setStatusMessage(result.rsvpRequired ? `${firstName(result.displayName)}, ${rsvp.messages.inviteResolved}` : "Este convite não precisa de confirmação.");
-    return result;
-  }, [rsvp.messages.invalidInvite, rsvp.messages.inviteRequired, rsvp.messages.inviteResolved]);
+    setSelectedGuests((current) => uniqueGuests([...current, guest]));
+    setGuestQuery("");
+    setGuestOptions([]);
+    setGuestSearchState("idle");
+    setHighlightedIndex(-1);
+    clearFieldError("guests");
+    clearSubmissionMessage();
+    window.requestAnimationFrame(() => guestInputRef.current?.focus());
+  }, [clearFieldError, clearSubmissionMessage, rsvp.messages.guestSearchDuplicate, selectedGuests]);
 
   useEffect(() => {
-    if (didAutoLookupRef.current || !inviteCode) return;
-    didAutoLookupRef.current = true;
-    void performInviteLookup(inviteCode);
-  }, [inviteCode, performInviteLookup]);
+    const query = guestQueryTrimmed;
+    if (query.length < 2) {
+      return;
+    }
 
-  function validateForm(
-    form: HTMLFormElement,
-    invite: Extract<InviteLookupResponse, { valid: true }>,
-  ) {
+    let cancelled = false;
+    const timeout = window.setTimeout(async () => {
+      setGuestSearchState("loading");
+      try {
+        const results = await searchGuests("/api/guests/search", query);
+        if (cancelled) return;
+
+        const filtered = results.filter((guest) => !selectedGuests.some((selected) => selected.guestId === guest.guestId));
+        setGuestOptions(filtered);
+        setGuestSearchState(filtered.length > 0 ? "results" : "empty");
+        setHighlightedIndex(filtered.length > 0 ? 0 : -1);
+      } catch {
+        if (cancelled) return;
+        setGuestOptions([]);
+        setGuestSearchState("error");
+        setHighlightedIndex(-1);
+      }
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [guestQueryTrimmed, selectedGuests]);
+
+  function validateForm(form: HTMLFormElement) {
     const formData = new FormData(form);
-    const inviteCodeValue = normalizeInviteCode(String(formData.get("inviteCode") ?? inviteCode));
     const phone = String(formData.get("phone") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const attendanceValue = formData.get("attendance");
+    const message = String(formData.get("message") ?? "").trim();
     const nextErrors: FieldErrors = {};
 
-    if (!invite.valid) {
-      nextErrors.inviteCode = inviteCodeValue ? rsvp.messages.invalidInvite : rsvp.messages.inviteRequired;
-    } else if (!invite.rsvpRequired) {
-      nextErrors.inviteCode = "Este convite não exige confirmação.";
+    if (selectedGuests.length === 0) {
+      nextErrors.guests = rsvp.messages.guestsRequired;
     }
 
     const phoneDigits = phone.replace(/\D/g, "");
@@ -155,10 +184,9 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       payload: {
         attendance: attendanceValue as RsvpSubmissionPayload["attendance"],
         email,
-        guestId: invite.guestId,
-        inviteCode: inviteCodeValue,
-        message: String(formData.get("message") ?? "").trim(),
+        message,
         phone,
+        selectedGuestIds: selectedGuests.map((guest) => guest.guestId),
       } satisfies RsvpSubmissionPayload,
     };
   }
@@ -174,74 +202,49 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     });
   }
 
-  async function handleInviteValidation() {
-    if (isLoading) return;
-    await performInviteLookup(inviteCode);
-    inviteInputRef.current?.focus();
-  }
-
-  function handleInviteCodeChange(value: string) {
-    setInviteCode(value);
-    if (validatedInviteCode && normalizeInviteCode(value) !== validatedInviteCode) {
-      setInviteRecord(null);
-      setValidatedInviteCode("");
-      setInviteState("idle");
-    }
-    setErrors((current) => {
-      if (!current.inviteCode) return current;
-      const next = { ...current };
-      delete next.inviteCode;
-      return next;
-    });
-    clearSubmissionMessage();
-  }
-
-  function handleFormChange(event: FormEvent<HTMLFormElement>) {
-    const target = event.target as HTMLInputElement | HTMLTextAreaElement;
-    const field = target.name as FieldName;
-
-    if (field) {
-      setErrors((current) => {
-        if (!current[field]) return current;
-        const next = { ...current };
-        delete next[field];
-        return next;
-      });
+  function handleGuestKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" && guestOptions.length > 0) {
+      event.preventDefault();
+      setHighlightedIndex((current) => Math.min(current + 1, guestOptions.length - 1));
+      return;
     }
 
-    if (target.name === "attendance" && target.value) {
-      setErrors((current) => {
-        if (!current.attendance) return current;
-        const next = { ...current };
-        delete next.attendance;
-        return next;
-      });
+    if (event.key === "ArrowUp" && guestOptions.length > 0) {
+      event.preventDefault();
+      setHighlightedIndex((current) => Math.max(current - 1, 0));
+      return;
     }
 
-    clearSubmissionMessage();
-  }
+    if (event.key === "Enter") {
+      if (highlightedIndex >= 0 && highlightedIndex < guestOptions.length) {
+        event.preventDefault();
+        addGuest(guestOptions[highlightedIndex]);
+        return;
+      }
 
-  async function ensureInviteReady(): Promise<Extract<InviteLookupResponse, { valid: true }> | null> {
-    if (activeInvite) return activeInvite;
-    if (!inviteCode.trim()) return null;
-    const result = await performInviteLookup(inviteCode);
-    return result && result.valid ? result : null;
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setGuestOptions([]);
+      setGuestSearchState("idle");
+      setHighlightedIndex(-1);
+      return;
+    }
+
+    if (event.key === "Backspace" && !guestQuery && selectedGuests.length > 0) {
+      event.preventDefault();
+      removeGuest(selectedGuests[selectedGuests.length - 1].guestId);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isLoading) return;
 
-    const readyInvite = await ensureInviteReady();
-    if (!readyInvite || !readyInvite.valid || !readyInvite.rsvpRequired) {
-      setErrors({ inviteCode: readyInvite ? "Este convite não exige confirmação." : inviteCode.trim() ? rsvp.messages.invalidInvite : rsvp.messages.inviteRequired });
-      setSubmissionState("error");
-      setStatusMessage(readyInvite ? "Este convite não exige confirmação." : inviteCode.trim() ? rsvp.messages.invalidInvite : rsvp.messages.inviteRequired);
-      focusFirstInvalidField({ inviteCode: readyInvite ? "Este convite não exige confirmação." : rsvp.messages.invalidInvite });
-      return;
-    }
-
-    const result = validateForm(event.currentTarget, readyInvite);
+    const result = validateForm(event.currentTarget);
     setErrors(result.errors);
 
     if (!result.payload) {
@@ -257,7 +260,6 @@ export function RsvpSection({ content }: RsvpSectionProps) {
 
     try {
       const submission = await submitRsvp(result.payload, mode === "endpoint" ? "/api/rsvp" : "");
-
       if (submission.mode === "demo") {
         setSubmissionState("demo");
         setStatusMessage(rsvp.messages.demo);
@@ -267,10 +269,12 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       setSubmissionState("success");
       setStatusMessage(rsvp.messages.success);
       formRef.current?.reset();
-      setInviteCode(normalizeInviteCode(inviteCode));
-      setValidatedInviteCode(normalizeInviteCode(inviteCode));
-      setInviteRecord(readyInvite);
       setAttendance("");
+      setSelectedGuests([]);
+      setGuestQuery("");
+      setGuestOptions([]);
+      setGuestSearchState("idle");
+      setHighlightedIndex(-1);
     } catch {
       setSubmissionState("error");
       setStatusMessage(rsvp.messages.genericError);
@@ -284,9 +288,9 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     .filter(Boolean)
     .join(" ");
 
-  const inviteClassName = [
-    styles.inviteStatus,
-    inviteState !== "idle" ? styles[inviteState] : "",
+  const guestStatusClassName = [
+    styles.guestStatus,
+    guestSearchState !== "idle" ? styles[guestSearchState] : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -310,7 +314,6 @@ export function RsvpSection({ content }: RsvpSectionProps) {
             aria-busy={isLoading}
             className={styles.form}
             noValidate
-            onChange={handleFormChange}
             onSubmit={handleSubmit}
             ref={formRef}
           >
@@ -319,72 +322,93 @@ export function RsvpSection({ content }: RsvpSectionProps) {
             </div>
 
             <div className={styles.inviteLookup}>
-              <div className={styles.field}>
-                <label htmlFor="rsvp-invite-code">
-                  {rsvp.labels.inviteCode}
+              <div className={styles.guestField}>
+                <label htmlFor={guestSearchId}>
+                  {rsvp.labels.guestSearch}
                   <span aria-hidden="true" className={styles.requiredMark}>*</span>
                 </label>
-                <input
-                  aria-describedby={errors.inviteCode ? fieldErrorId("inviteCode") : "rsvp-invite-code-help"}
-                  aria-invalid={Boolean(errors.inviteCode)}
-                  autoComplete="off"
-                  id="rsvp-invite-code"
-                  maxLength={128}
-                  name="inviteCode"
-                  onChange={(event) => handleInviteCodeChange(event.target.value)}
-                  ref={inviteInputRef}
-                  required
-                  spellCheck={false}
-                  type="text"
-                  value={inviteCode}
-                />
-                <p className={styles.fieldHint} id="rsvp-invite-code-help">{rsvp.labels.inviteCodeHelp}</p>
-                <FieldError field="inviteCode" message={errors.inviteCode} />
-              </div>
 
-              <button className={styles.validateButton} disabled={isLoading || inviteState === "loading"} onClick={handleInviteValidation} type="button">
-                <span className={styles.buttonMark} aria-hidden="true" />
-                <span>Validar convite</span>
-              </button>
+                <div
+                  aria-controls={guestListboxId}
+                  aria-expanded={guestSearchState === "results" && guestOptions.length > 0}
+                  aria-haspopup="listbox"
+                  className={styles.guestCombobox}
+                  role="combobox"
+                >
+                  <div className={styles.selectedGuestWrap}>
+                    {selectedGuests.map((guest) => (
+                      <span className={styles.guestChip} key={guest.guestId}>
+                        <span className={styles.guestChipLabel}>{guest.displayName}</span>
+                        <button
+                          aria-label={`${rsvp.labels.guestSearchRemove} ${guest.displayName}`}
+                          className={styles.guestChipRemove}
+                          onClick={() => removeGuest(guest.guestId)}
+                          type="button"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
 
-              <div className={inviteClassName} aria-live="polite">
-                {inviteState === "valid" && activeInvite ? (
-                  <>
-                    <p className={styles.inviteEyebrow}>{inviteName ? `Olá, ${inviteName}.` : "Olá."}</p>
-                    <p>{activeInvite.rsvpRequired ? rsvp.messages.inviteResolved : "Este convite não precisa de confirmação."}</p>
-                  </>
-                ) : (
-                  <p>{statusMessage}</p>
-                )}
-              </div>
-            </div>
-
-            {activeInvite ? (
-              <>
-                <div className={styles.readOnlyCard}>
-                  <label htmlFor="rsvp-canonical-name">
-                    {rsvp.labels.canonicalName}
-                  </label>
-                  <input
-                    id="rsvp-canonical-name"
-                    readOnly
-                    value={activeInvite.displayName}
-                  />
-                  <p className={styles.fieldHint}>{rsvp.labels.canonicalNameHelp}</p>
+                    <input
+                      aria-activedescendant={highlightedIndex >= 0 && highlightedIndex < guestOptions.length ? `${guestListboxId}-option-${guestOptions[highlightedIndex].guestId}` : undefined}
+                      aria-describedby={[errors.guests ? fieldErrorId("guests") : null, "rsvp-guest-search-help", "rsvp-guest-search-status"]
+                        .filter(Boolean)
+                        .join(" ") || undefined}
+                      aria-invalid={Boolean(errors.guests)}
+                      autoComplete="off"
+                      id={guestSearchId}
+                      maxLength={80}
+                      name="guestSearch"
+                      onBlur={() => {
+                        window.setTimeout(() => {
+                          if (!document.activeElement || !document.activeElement.closest?.(`.${styles.guestCombobox}`)) {
+                            setGuestOptions([]);
+                            setGuestSearchState("idle");
+                            setHighlightedIndex(-1);
+                          }
+                        }, 0);
+                      }}
+                      onChange={(event) => {
+                        setGuestQuery(event.target.value);
+                        clearFieldError("guests");
+                        clearSubmissionMessage();
+                      }}
+                      onKeyDown={handleGuestKeyDown}
+                      ref={guestInputRef}
+                      spellCheck={false}
+                      type="text"
+                      value={guestQuery}
+                    />
+                  </div>
                 </div>
 
-                {activeInvite.dependents.length > 0 ? (
-                  <div className={styles.readOnlyCard}>
-                    <p className={styles.cardLabel}>Este convite também inclui:</p>
-                    <ul className={styles.dependentsList}>
-                      {activeInvite.dependents.map((dependent) => (
-                        <li key={dependent.guestId}>{dependent.displayName}</li>
-                      ))}
-                    </ul>
-                  </div>
+                <p className={styles.fieldHint} id="rsvp-guest-search-help">{rsvp.labels.guestSearchHelp}</p>
+                <p className={guestStatusClassName} id="rsvp-guest-search-status" aria-live="polite">
+                  {guestListMessage}
+                </p>
+                <FieldError field="guests" message={errors.guests} />
+
+                {guestQueryTrimmed.length >= 2 && guestSearchState === "results" && guestOptions.length > 0 ? (
+                  <ul className={styles.guestListbox} id={guestListboxId} role="listbox">
+                    {guestOptions.map((guest, index) => (
+                      <li
+                        aria-selected={index === highlightedIndex}
+                        className={index === highlightedIndex ? styles.guestOptionActive : styles.guestOption}
+                        id={`${guestListboxId}-option-${guest.guestId}`}
+                        key={guest.guestId}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onMouseEnter={() => setHighlightedIndex(index)}
+                        onClick={() => addGuest(guest)}
+                        role="option"
+                      >
+                        <span className={styles.guestOptionName}>{guest.displayName}</span>
+                      </li>
+                    ))}
+                  </ul>
                 ) : null}
-              </>
-            ) : null}
+              </div>
+            </div>
 
             <div className={styles.fieldGrid}>
               <div className={styles.field}>
@@ -424,7 +448,6 @@ export function RsvpSection({ content }: RsvpSectionProps) {
             <fieldset
               aria-describedby={errors.attendance ? fieldErrorId("attendance") : undefined}
               className={styles.attendanceFieldset}
-              disabled={!activeInvite?.rsvpRequired}
             >
               <legend>
                 {rsvp.labels.attendance}
@@ -434,7 +457,6 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                 <label className={styles.radioOption}>
                   <input
                     checked={attendance === "yes"}
-                    disabled={!activeInvite?.rsvpRequired}
                     name="attendance"
                     onChange={() => setAttendance("yes")}
                     required
@@ -446,7 +468,6 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                 <label className={styles.radioOption}>
                   <input
                     checked={attendance === "no"}
-                    disabled={!activeInvite?.rsvpRequired}
                     name="attendance"
                     onChange={() => setAttendance("no")}
                     required
@@ -465,7 +486,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
             </div>
 
             <div className={styles.actionRow}>
-              <button className={styles.submitButton} disabled={isLoading || !activeInvite?.rsvpRequired} type="submit">
+              <button className={styles.submitButton} disabled={isLoading} type="submit">
                 <span aria-hidden="true" className={styles.buttonMark} />
                 <span>{isLoading ? rsvp.labels.submitting : rsvp.labels.submit}</span>
               </button>

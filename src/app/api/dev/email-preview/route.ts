@@ -7,24 +7,21 @@ export const runtime = "nodejs";
 
 function renderPreview(template: string) {
   if (template === "guest-yes") {
-    return renderRsvpGuestEmail({ attendance: "yes", firstName: "Maria" });
+    return renderRsvpGuestEmail({ attendance: "yes", selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }] });
   }
 
   if (template === "guest-no") {
-    return renderRsvpGuestEmail({ attendance: "no", firstName: "Maria" });
+    return renderRsvpGuestEmail({ attendance: "no", selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }] });
   }
 
   if (template === "admin") {
     return renderRsvpAdminEmail({
       attendance: "yes",
-      displayName: "Maria Silva",
       email: "maria@example.com",
-      guestId: "guest-1",
-      inviteCodeRef: "preview-ref",
       message: "Até lá",
       phone: "+55 83 99999-9999",
       receivedAt: "2026-08-24T12:00:00.000Z",
-      side: "Maria",
+      selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }],
     });
   }
 
