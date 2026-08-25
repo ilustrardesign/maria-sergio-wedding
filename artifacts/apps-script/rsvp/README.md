@@ -3,7 +3,7 @@
 The Apps Script Web App now supports two actions:
 
 - `search`: returns up to 8 guests as `{ guestId, displayName }`
-- `submit`: validates every `selectedGuestId` before writing the RSVP row
+- `submit`: validates every `{ guestId, attendance }` before writing the RSVP row
 
 ## Sheet structure
 
@@ -13,7 +13,7 @@ Private registry tab:
 
 Submission tab:
 
-`received_at, attendance, selected_guest_ids, selected_guest_display_names, phone, email, message, submitted, notes`
+`received_at, selected_guest_ids, selected_guest_display_names, selected_guest_attendance, phone, email, message, submitted, notes`
 
 ## Notes
 

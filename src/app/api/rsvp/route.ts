@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { sendRsvpEmails } from "@/lib/resend";
-import { cleanText, type GuestSelection, type RsvpSubmissionPayload } from "@/lib/guests";
+import { cleanText, getDemoGuestRows, getRsvpMode, type RsvpGuestSubmission, type RsvpSubmissionPayload, validateRsvpGuests } from "@/lib/guests";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,32 @@ type AppsScriptSubmitResponse = {
   message?: string;
   ok?: boolean;
   receivedAt?: string;
-  selectedGuests?: GuestSelection[];
+  selectedGuests?: Array<{ attendance?: "yes" | "no"; displayName?: string; guestId?: string }>;
+};
+
+type RsvpApiResponse = {
+  adminEmail: "sent" | "failed" | "skipped";
+  emailNotificationSent: boolean;
+  id: string | null;
+  mode: "demo" | "endpoint";
+  persisted: boolean;
+  guestEmail: "sent" | "failed" | "skipped";
+  selectedGuests: Array<{ attendance: "yes" | "no"; displayName: string; guestId: string }>;
+  submitted: true;
+};
+
+type SanitizedGuest = {
+  attendance: "yes" | "no" | "";
+  guestId: string;
+};
+
+type SanitizedRsvpPayload = {
+  email: string;
+  guests: SanitizedGuest[];
+  hasInvalidGuest: boolean;
+  hasDuplicateGuest: boolean;
+  message: string;
+  phone: string;
 };
 
 const genericFailure = "Não foi possível registrar esta confirmação agora. Tente novamente em instantes.";
@@ -51,19 +76,29 @@ function getAppsScriptConfig() {
   };
 }
 
-function sanitizePayload(body: Partial<RsvpSubmissionPayload> & { selectedGuestIds?: unknown }) {
-  const selectedGuestIds = Array.isArray(body.selectedGuestIds)
-    ? body.selectedGuestIds.map((guestId) => cleanText(guestId, 120)).filter(Boolean)
+function sanitizePayload(body: Partial<RsvpSubmissionPayload> & { guests?: unknown }): SanitizedRsvpPayload {
+  const guests: SanitizedGuest[] = Array.isArray(body.guests)
+    ? body.guests.map((guest) => {
+        const isObject = typeof guest === "object" && guest !== null;
+        const attendance = isObject ? (guest as { attendance?: unknown }).attendance : "";
+        const guestId = isObject ? cleanText((guest as { guestId?: unknown }).guestId, 120) : "";
+        return {
+          attendance: attendance === "yes" || attendance === "no" ? attendance : "",
+          guestId,
+        };
+      })
     : [];
-  const attendance = body.attendance === "yes" || body.attendance === "no" ? body.attendance : "yes";
 
+  const hasInvalidGuest = guests.some((guest) => !guest.guestId || !guest.attendance);
+  const hasDuplicateGuest = new Set(guests.map((guest) => guest.guestId).filter(Boolean)).size !== guests.filter((guest) => guest.guestId).length;
   return {
-    attendance,
     email: cleanText(body.email, 160),
     message: cleanText(body.message, 800),
     phone: cleanText(body.phone, 25),
-    selectedGuestIds,
-  } satisfies RsvpSubmissionPayload;
+    guests,
+    hasInvalidGuest,
+    hasDuplicateGuest,
+  };
 }
 
 export async function POST(request: Request) {
@@ -76,13 +111,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Dados inválidos." }, { status: 400 });
   }
 
-  if (body.attendance !== "yes" && body.attendance !== "no") {
-    return NextResponse.json({ message: "Preencha os dados obrigatórios." }, { status: 400 });
+  const payload = sanitizePayload(body as Partial<RsvpSubmissionPayload> & { guests?: unknown });
+  if (!payload.phone || payload.guests.length === 0) {
+    return NextResponse.json({ message: "Selecione pelo menos um convidado." }, { status: 400 });
+  }
+  if (payload.hasInvalidGuest || payload.hasDuplicateGuest) {
+    return NextResponse.json({ message: "Convidado inválido." }, { status: 400 });
   }
 
-  const payload = sanitizePayload(body as Partial<RsvpSubmissionPayload> & { selectedGuestIds?: unknown });
-  if (!payload.phone || payload.selectedGuestIds.length === 0) {
-    return NextResponse.json({ message: "Selecione pelo menos um convidado." }, { status: 400 });
+  const mode = getRsvpMode();
+  if (mode === "demo") {
+    const demoGuests = payload.guests as RsvpGuestSubmission[];
+    const validation = validateRsvpGuests(getDemoGuestRows(), demoGuests);
+    if (!validation.ok) {
+      return NextResponse.json({ message: "Convidado inválido." }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      adminEmail: "skipped",
+      emailNotificationSent: false,
+      guestEmail: "skipped",
+      id: null,
+      mode: "demo",
+      persisted: false,
+      selectedGuests: validation.selectedGuests,
+      submitted: true,
+    } satisfies RsvpApiResponse);
   }
 
   const { appsScriptUrl, sharedSecret } = getAppsScriptConfig();
@@ -94,12 +148,11 @@ export async function POST(request: Request) {
   const submitResponse = await fetch(appsScriptUrl, {
     body: JSON.stringify({
       action: "submit",
-      attendance: payload.attendance,
       email: payload.email,
       message: payload.message,
       phone: payload.phone,
       receivedAt,
-      selectedGuestIds: payload.selectedGuestIds,
+      guests: payload.guests,
       secret: sharedSecret,
       source: "maria-sergio-site",
     }),
@@ -118,13 +171,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const selectedGuests = submitResult.selectedGuests.filter((guest): guest is GuestSelection => Boolean(guest) && typeof guest.guestId === "string" && typeof guest.displayName === "string");
+  const selectedGuests = submitResult.selectedGuests
+    .filter((guest) => Boolean(guest) && typeof guest.guestId === "string" && typeof guest.displayName === "string" && (guest.attendance === "yes" || guest.attendance === "no"))
+    .map((guest) => ({
+      attendance: guest.attendance as "yes" | "no",
+      displayName: guest.displayName as string,
+      guestId: guest.guestId as string,
+    }));
   if (selectedGuests.length === 0) {
     return NextResponse.json({ message: genericFailure }, { status: 502 });
   }
 
   const emailResult = await sendRsvpEmails({
-    attendance: payload.attendance,
     email: payload.email,
     message: payload.message,
     phone: payload.phone,
@@ -136,9 +194,18 @@ export async function POST(request: Request) {
     console.error("RSVP email delivery status", {
       admin: emailResult.admin,
       guest: emailResult.guest,
-      selectedGuestIds: selectedGuests.map((guest) => guest.guestId),
+      guestIds: selectedGuests.map((guest) => guest.guestId),
     });
   }
 
-  return NextResponse.json({ id: submitResult.id ?? null, submitted: true });
+  return NextResponse.json({
+    adminEmail: emailResult.admin,
+    emailNotificationSent: emailResult.guest === "sent",
+    guestEmail: emailResult.guest,
+    id: submitResult.id ?? null,
+    mode: "endpoint",
+    persisted: true,
+    selectedGuests,
+    submitted: true,
+  } satisfies RsvpApiResponse);
 }

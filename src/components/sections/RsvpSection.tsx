@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
-import { searchGuests, type GuestSelection, type RsvpSubmissionPayload } from "@/lib/guests";
+import { searchGuests, type GuestSelection, type GuestAttendance, type RsvpSubmissionPayload } from "@/lib/guests";
 import { submitRsvp } from "@/lib/rsvp";
-import type { RsvpMode, WeddingContent } from "@/types/wedding";
+import type { WeddingContent } from "@/types/wedding";
 
 import styles from "./RsvpSection.module.css";
 
@@ -12,12 +12,15 @@ type RsvpSectionProps = {
   content: WeddingContent;
 };
 
-type FieldName = "attendance" | "email" | "guests" | "phone";
+type FieldName = "email" | "guests" | "phone";
 type FieldErrors = Partial<Record<FieldName, string>>;
+type AttendanceErrors = Record<string, string>;
+type SelectedGuest = GuestSelection & {
+  attendance: GuestAttendance | null;
+};
 type SubmissionState = "idle" | "loading" | "demo" | "success" | "error";
-type SearchState = "idle" | "loading" | "empty" | "error" | "results";
-
-const validationOrder: FieldName[] = ["guests", "attendance", "phone", "email"];
+type SearchState = "idle" | "loading" | "results" | "empty" | "error";
+type SearchTone = "neutral" | "loading" | "warning" | "error" | "success";
 
 const fieldErrorId = (field: FieldName) => `rsvp-${field}-error`;
 const guestSearchId = "rsvp-guest-search";
@@ -25,7 +28,6 @@ const guestListboxId = "rsvp-guest-listbox";
 
 function FieldError({ field, message }: { field: FieldName; message?: string }) {
   if (!message) return null;
-
   return (
     <p className={styles.fieldError} id={fieldErrorId(field)}>
       {message}
@@ -33,59 +35,64 @@ function FieldError({ field, message }: { field: FieldName; message?: string }) 
   );
 }
 
-function resolveMode(defaultMode: RsvpMode): RsvpMode {
-  const configuredMode = process.env.NEXT_PUBLIC_RSVP_MODE;
-  return configuredMode === "demo" || configuredMode === "endpoint" ? configuredMode : defaultMode;
-}
-
-function uniqueGuests(guests: GuestSelection[]) {
-  const seen = new Set<string>();
-  return guests.filter((guest) => {
-    if (seen.has(guest.guestId)) return false;
-    seen.add(guest.guestId);
-    return true;
-  });
+function AttendanceOption({
+  checked,
+  ariaLabel,
+  label,
+  name,
+  onChange,
+  value,
+}: {
+  checked: boolean;
+  ariaLabel: string;
+  label: string;
+  name: string;
+  onChange: (value: GuestAttendance) => void;
+  value: GuestAttendance;
+}) {
+  return (
+    <label className={styles.attendanceOption}>
+      <input aria-label={ariaLabel} checked={checked} name={name} onChange={() => onChange(value)} type="radio" value={value} />
+      <span>{label}</span>
+    </label>
+  );
 }
 
 export function RsvpSection({ content }: RsvpSectionProps) {
   const { rsvp } = content;
   const formRef = useRef<HTMLFormElement>(null);
-  const guestInputRef = useRef<HTMLInputElement>(null);
-  const [attendance, setAttendance] = useState<RsvpSubmissionPayload["attendance"] | "">("");
-  const [selectedGuests, setSelectedGuests] = useState<GuestSelection[]>([]);
-  const [guestQuery, setGuestQuery] = useState("");
-  const [guestOptions, setGuestOptions] = useState<GuestSelection[]>([]);
-  const [guestSearchState, setGuestSearchState] = useState<SearchState>("idle");
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [selectedGuests, setSelectedGuests] = useState<SelectedGuest[]>([]);
+  const [options, setOptions] = useState<GuestSelection[]>([]);
+  const [searchState, setSearchState] = useState<SearchState>("idle");
+  const [searchTone, setSearchTone] = useState<SearchTone>("neutral");
+  const [searchFeedback, setSearchFeedback] = useState(rsvp.labels.guestSearchHelp);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [attendanceErrors, setAttendanceErrors] = useState<AttendanceErrors>({});
   const [submissionState, setSubmissionState] = useState<SubmissionState>("idle");
   const [statusMessage, setStatusMessage] = useState("");
-  const mode = resolveMode(rsvp.defaultMode);
+  const [isFocused, setIsFocused] = useState(false);
+  const queryTrimmed = query.trim();
   const isLoading = submissionState === "loading";
 
-  const guestQueryTrimmed = guestQuery.trim();
-  const guestListMessage =
-    guestQueryTrimmed.length === 0
-      ? ""
-      : guestQueryTrimmed.length < 2
-        ? rsvp.labels.guestSearchMinimum
-        : guestSearchState === "loading"
-          ? rsvp.labels.guestSearchLoading
-          : guestSearchState === "empty"
-            ? rsvp.labels.guestSearchEmpty
-            : guestSearchState === "error"
-              ? rsvp.messages.guestSearchFailed
-              : "";
+  const visibleSearchMessage = useMemo(() => {
+    if (searchTone === "warning" && searchFeedback === "Selecione um nome da lista para adicioná-lo.") return searchFeedback;
+    if (searchTone === "success" && searchFeedback !== rsvp.labels.guestSearchHelp) return searchFeedback;
+    if (searchState === "loading") return rsvp.labels.guestSearchLoading;
+    if (queryTrimmed.length === 0) return rsvp.labels.guestSearchHelp;
+    if (queryTrimmed.length < 2) return rsvp.labels.guestSearchMinimum;
+    if (searchState === "empty") return `${rsvp.labels.guestSearchEmpty} Confira a escrita ou tente outro sobrenome.`;
+    if (searchState === "error") return rsvp.messages.guestSearchFailed;
+    return searchFeedback;
+  }, [queryTrimmed.length, rsvp.labels.guestSearchEmpty, rsvp.labels.guestSearchHelp, rsvp.labels.guestSearchLoading, rsvp.labels.guestSearchMinimum, rsvp.messages.guestSearchFailed, searchFeedback, searchState, searchTone]);
 
-  const clearSubmissionMessage = useCallback(() => {
-    if (!isLoading && submissionState !== "idle") {
-      setSubmissionState("idle");
-      setStatusMessage("");
-    }
-  }, [isLoading, submissionState]);
+  const isSearchInvalid = isFocused && queryTrimmed.length >= 2 && (searchState === "empty" || searchState === "error");
 
   const clearFieldError = useCallback((field: FieldName) => {
-    setErrors((current) => {
+    setFieldErrors((current) => {
       if (!current[field]) return current;
       const next = { ...current };
       delete next[field];
@@ -93,51 +100,109 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     });
   }, []);
 
-  const removeGuest = useCallback((guestId: string) => {
-    setSelectedGuests((current) => current.filter((guest) => guest.guestId !== guestId));
+  const clearSubmissionMessage = useCallback(() => {
+    if (submissionState !== "idle" && !isLoading) {
+      setSubmissionState("idle");
+      setStatusMessage("");
+    }
+  }, [isLoading, submissionState]);
+
+  const updateAttendance = useCallback((guestId: string, attendance: GuestAttendance) => {
+    setSelectedGuests((current) => current.map((guest) => (guest.guestId === guestId ? { ...guest, attendance } : guest)));
+    setAttendanceErrors((current) => {
+      if (!current[guestId]) return current;
+      const next = { ...current };
+      delete next[guestId];
+      return next;
+    });
     clearFieldError("guests");
     clearSubmissionMessage();
   }, [clearFieldError, clearSubmissionMessage]);
 
+  const removeGuest = useCallback((guestId: string) => {
+    setSelectedGuests((current) => current.filter((guest) => guest.guestId !== guestId));
+    setAttendanceErrors((current) => {
+      if (!current[guestId]) return current;
+      const next = { ...current };
+      delete next[guestId];
+      return next;
+    });
+    clearFieldError("guests");
+    clearSubmissionMessage();
+    setSearchFeedback("Convidado removido.");
+    setSearchTone("success");
+  }, [clearFieldError, clearSubmissionMessage]);
+
   const addGuest = useCallback((guest: GuestSelection) => {
-    const isDuplicate = selectedGuests.some((selected) => selected.guestId === guest.guestId);
-    if (isDuplicate) {
-      setErrors((currentErrors) => ({ ...currentErrors, guests: rsvp.messages.guestSearchDuplicate }));
+    let duplicate = false;
+    setSelectedGuests((current) => {
+      if (current.some((selected) => selected.guestId === guest.guestId)) {
+        duplicate = true;
+        return current;
+      }
+
+      return [...current, { attendance: null, displayName: guest.displayName, guestId: guest.guestId }];
+    });
+
+    if (duplicate) {
+      setSearchFeedback(rsvp.messages.guestSearchDuplicate);
+      setSearchTone("warning");
       return;
     }
 
-    setSelectedGuests((current) => uniqueGuests([...current, guest]));
-    setGuestQuery("");
-    setGuestOptions([]);
-    setGuestSearchState("idle");
+    setSearchFeedback(`${guest.displayName} foi adicionado.`);
+    setSearchTone("success");
+
+    setQuery("");
+    setOptions([]);
+    setSearchState("idle");
     setHighlightedIndex(-1);
     clearFieldError("guests");
     clearSubmissionMessage();
-    window.requestAnimationFrame(() => guestInputRef.current?.focus());
-  }, [clearFieldError, clearSubmissionMessage, rsvp.messages.guestSearchDuplicate, selectedGuests]);
+    window.requestAnimationFrame(() => inputRef.current?.focus());
+  }, [clearFieldError, clearSubmissionMessage, rsvp.messages.guestSearchDuplicate]);
 
   useEffect(() => {
-    const query = guestQueryTrimmed;
-    if (query.length < 2) {
+    const normalized = queryTrimmed;
+
+    if (normalized.length === 0) {
+      return;
+    }
+
+    if (normalized.length < 2) {
       return;
     }
 
     let cancelled = false;
     const timeout = window.setTimeout(async () => {
-      setGuestSearchState("loading");
+      setSearchState("loading");
+      setSearchTone("loading");
+      setSearchFeedback(rsvp.labels.guestSearchLoading);
       try {
-        const results = await searchGuests("/api/guests/search", query);
+        const results = await searchGuests("/api/guests/search", normalized);
         if (cancelled) return;
 
         const filtered = results.filter((guest) => !selectedGuests.some((selected) => selected.guestId === guest.guestId));
-        setGuestOptions(filtered);
-        setGuestSearchState(filtered.length > 0 ? "results" : "empty");
-        setHighlightedIndex(filtered.length > 0 ? 0 : -1);
+        setOptions(filtered);
+        if (filtered.length === 0) {
+          setSearchState("empty");
+          setSearchTone("warning");
+          setHighlightedIndex(-1);
+          setSearchFeedback(`${rsvp.labels.guestSearchEmpty} Confira a escrita ou tente outro sobrenome.`);
+          return;
+        }
+
+        setSearchState("results");
+        setSearchTone("success");
+        setHighlightedIndex(0);
+        setSearchFeedback(rsvp.labels.guestSearchHelp);
       } catch {
         if (cancelled) return;
-        setGuestOptions([]);
-        setGuestSearchState("error");
+        setOptions([]);
+        setSearchState("error");
+        setSearchTone("error");
         setHighlightedIndex(-1);
+        setSearchFeedback(rsvp.messages.guestSearchFailed);
       }
     }, 220);
 
@@ -145,80 +210,92 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [guestQueryTrimmed, selectedGuests]);
+  }, [queryTrimmed, rsvp.labels.guestSearchEmpty, rsvp.labels.guestSearchHelp, rsvp.labels.guestSearchLoading, rsvp.messages.guestSearchFailed, selectedGuests]);
+
+  const focusedGuest = highlightedIndex >= 0 && highlightedIndex < options.length ? options[highlightedIndex] : null;
 
   function validateForm(form: HTMLFormElement) {
     const formData = new FormData(form);
     const phone = String(formData.get("phone") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
-    const attendanceValue = formData.get("attendance");
     const message = String(formData.get("message") ?? "").trim();
-    const nextErrors: FieldErrors = {};
+    const nextFieldErrors: FieldErrors = {};
+    const nextAttendanceErrors: AttendanceErrors = {};
+    let firstErrorSelector: string | null = null;
 
     if (selectedGuests.length === 0) {
-      nextErrors.guests = rsvp.messages.guestsRequired;
+      nextFieldErrors.guests = "Selecione pelo menos um convidado.";
+      firstErrorSelector = `#${guestSearchId}`;
     }
 
-    const phoneDigits = phone.replace(/\D/g, "");
-    const phoneHasValidShape = /^[+\d][\d\s().-]*$/.test(phone);
+    selectedGuests.forEach((guest) => {
+      if (guest.attendance) return;
+      nextAttendanceErrors[guest.guestId] = `Informe se ${guest.displayName} estará presente.`;
+      if (!firstErrorSelector) {
+        firstErrorSelector = `[name="attendance-${guest.guestId}"]`;
+      }
+    });
+
     if (!phone) {
-      nextErrors.phone = rsvp.messages.required;
-    } else if (!phoneHasValidShape || phoneDigits.length < 8 || phoneDigits.length > 15) {
-      nextErrors.phone = rsvp.messages.invalidPhone;
+      nextFieldErrors.phone = rsvp.messages.required;
+      if (!firstErrorSelector) firstErrorSelector = "#rsvp-phone";
+    } else {
+      const phoneDigits = phone.replace(/\D/g, "");
+      const phoneHasValidShape = /^[+\d][\d\s().-]*$/.test(phone);
+      if (!phoneHasValidShape || phoneDigits.length < 8 || phoneDigits.length > 15) {
+        nextFieldErrors.phone = rsvp.messages.invalidPhone;
+        if (!firstErrorSelector) firstErrorSelector = "#rsvp-phone";
+      }
     }
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      nextErrors.email = rsvp.messages.invalidEmail;
+      nextFieldErrors.email = rsvp.messages.invalidEmail;
+      if (!firstErrorSelector) firstErrorSelector = "#rsvp-email";
     }
 
-    if (attendanceValue !== "yes" && attendanceValue !== "no") {
-      nextErrors.attendance = rsvp.messages.required;
-    }
-
-    if (Object.keys(nextErrors).length > 0) {
-      return { errors: nextErrors, payload: null };
+    if (Object.keys(nextFieldErrors).length > 0 || Object.keys(nextAttendanceErrors).length > 0) {
+      return { errors: nextFieldErrors, attendanceErrors: nextAttendanceErrors, firstErrorSelector, payload: null };
     }
 
     return {
-      errors: nextErrors,
+      attendanceErrors: nextAttendanceErrors,
+      errors: nextFieldErrors,
+      firstErrorSelector,
       payload: {
-        attendance: attendanceValue as RsvpSubmissionPayload["attendance"],
         email,
+        guests: selectedGuests
+          .filter((guest): guest is SelectedGuest & { attendance: GuestAttendance } => guest.attendance === "yes" || guest.attendance === "no")
+          .map((guest) => ({ attendance: guest.attendance, guestId: guest.guestId })),
         message,
         phone,
-        selectedGuestIds: selectedGuests.map((guest) => guest.guestId),
       } satisfies RsvpSubmissionPayload,
     };
   }
 
-  function focusFirstInvalidField(nextErrors: FieldErrors) {
-    const firstInvalidField = validationOrder.find((field) => nextErrors[field]);
-    if (!firstInvalidField) return;
-
+  function focusFirstInvalidField(selector: string | null) {
+    if (!selector) return;
     window.requestAnimationFrame(() => {
-      formRef.current
-        ?.querySelector<HTMLElement>(`[name="${firstInvalidField}"]`)
-        ?.focus();
+      formRef.current?.querySelector<HTMLElement>(selector)?.focus();
     });
   }
 
-  function handleGuestKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "ArrowDown" && guestOptions.length > 0) {
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" && options.length > 0) {
       event.preventDefault();
-      setHighlightedIndex((current) => Math.min(current + 1, guestOptions.length - 1));
+      setHighlightedIndex((current) => Math.min(current + 1, options.length - 1));
       return;
     }
 
-    if (event.key === "ArrowUp" && guestOptions.length > 0) {
+    if (event.key === "ArrowUp" && options.length > 0) {
       event.preventDefault();
       setHighlightedIndex((current) => Math.max(current - 1, 0));
       return;
     }
 
     if (event.key === "Enter") {
-      if (highlightedIndex >= 0 && highlightedIndex < guestOptions.length) {
+      if (focusedGuest) {
         event.preventDefault();
-        addGuest(guestOptions[highlightedIndex]);
+        addGuest(focusedGuest);
         return;
       }
 
@@ -228,15 +305,11 @@ export function RsvpSection({ content }: RsvpSectionProps) {
 
     if (event.key === "Escape") {
       event.preventDefault();
-      setGuestOptions([]);
-      setGuestSearchState("idle");
+      setOptions([]);
+      setSearchState("idle");
       setHighlightedIndex(-1);
+      setSearchTone("neutral");
       return;
-    }
-
-    if (event.key === "Backspace" && !guestQuery && selectedGuests.length > 0) {
-      event.preventDefault();
-      removeGuest(selectedGuests[selectedGuests.length - 1].guestId);
     }
   }
 
@@ -245,13 +318,13 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     if (isLoading) return;
 
     const result = validateForm(event.currentTarget);
-    setErrors(result.errors);
+    setFieldErrors(result.errors);
+    setAttendanceErrors(result.attendanceErrors);
 
     if (!result.payload) {
-      const firstMessage = validationOrder.map((field) => result.errors[field]).find(Boolean);
       setSubmissionState("error");
-      setStatusMessage(firstMessage ?? rsvp.messages.genericError);
-      focusFirstInvalidField(result.errors);
+      setStatusMessage(result.errors.guests || result.errors.phone || result.errors.email || Object.values(result.attendanceErrors)[0] || rsvp.messages.genericError);
+      focusFirstInvalidField(result.firstErrorSelector);
       return;
     }
 
@@ -259,7 +332,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     setStatusMessage(rsvp.labels.submitting);
 
     try {
-      const submission = await submitRsvp(result.payload, mode === "endpoint" ? "/api/rsvp" : "");
+      const submission = await submitRsvp(result.payload, "/api/rsvp");
       if (submission.mode === "demo") {
         setSubmissionState("demo");
         setStatusMessage(rsvp.messages.demo);
@@ -267,14 +340,19 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       }
 
       setSubmissionState("success");
-      setStatusMessage(rsvp.messages.success);
+      setStatusMessage(submission.emailNotificationSent && result.payload.email
+        ? `${rsvp.messages.success} Enviamos uma confirmação para seu e-mail.`
+        : rsvp.messages.success);
       formRef.current?.reset();
-      setAttendance("");
+      setQuery("");
       setSelectedGuests([]);
-      setGuestQuery("");
-      setGuestOptions([]);
-      setGuestSearchState("idle");
+      setOptions([]);
+      setSearchState("idle");
+      setSearchTone("neutral");
+      setSearchFeedback(rsvp.labels.guestSearchHelp);
       setHighlightedIndex(-1);
+      setAttendanceErrors({});
+      setFieldErrors({});
     } catch {
       setSubmissionState("error");
       setStatusMessage(rsvp.messages.genericError);
@@ -284,16 +362,12 @@ export function RsvpSection({ content }: RsvpSectionProps) {
   const statusClassName = [
     styles.status,
     submissionState !== "idle" ? styles[submissionState] : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  ].filter(Boolean).join(" ");
 
-  const guestStatusClassName = [
-    styles.guestStatus,
-    guestSearchState !== "idle" ? styles[guestSearchState] : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const searchMessageClassName = [
+    styles.searchStatus,
+    styles[searchTone],
+  ].filter(Boolean).join(" ");
 
   return (
     <section aria-labelledby="rsvp-title" className={styles.section} id="rsvp">
@@ -310,104 +384,160 @@ export function RsvpSection({ content }: RsvpSectionProps) {
         </header>
 
         <div className={styles.formFrame} data-reveal>
-          <form
-            aria-busy={isLoading}
-            className={styles.form}
-            noValidate
-            onSubmit={handleSubmit}
-            ref={formRef}
-          >
+          <form aria-busy={isLoading} className={styles.form} noValidate onSubmit={handleSubmit} ref={formRef}>
             <div aria-hidden="true" className={styles.formOrnament}>
               <span />
             </div>
 
-            <div className={styles.inviteLookup}>
-              <div className={styles.guestField}>
-                <label htmlFor={guestSearchId}>
-                  {rsvp.labels.guestSearch}
-                  <span aria-hidden="true" className={styles.requiredMark}>*</span>
-                </label>
+            <div className={styles.searchBlock} ref={searchWrapRef}>
+              <label className={styles.searchLabel} htmlFor={guestSearchId}>
+                {rsvp.labels.guestSearch}
+                <span aria-hidden="true" className={styles.requiredMark}>*</span>
+              </label>
+              <p className={styles.fieldHint} id="rsvp-guest-search-help">{rsvp.labels.guestSearchHelp}</p>
 
-                <div
+              <div className={styles.searchInputFrame}>
+                <input
+                  aria-activedescendant={focusedGuest ? `${guestListboxId}-option-${focusedGuest.guestId}` : undefined}
                   aria-controls={guestListboxId}
-                  aria-expanded={guestSearchState === "results" && guestOptions.length > 0}
+                  aria-expanded={options.length > 0 && (searchState === "results" || searchState === "loading")}
+                  aria-describedby={[fieldErrors.guests ? fieldErrorId("guests") : null, "rsvp-guest-search-help", "rsvp-guest-search-status"].filter(Boolean).join(" ") || undefined}
+                  aria-invalid={isSearchInvalid || Boolean(fieldErrors.guests)}
+                  autoComplete="off"
+                  id={guestSearchId}
+                  maxLength={120}
                   aria-haspopup="listbox"
-                  className={styles.guestCombobox}
                   role="combobox"
-                >
-                  <div className={styles.selectedGuestWrap}>
-                    {selectedGuests.map((guest) => (
-                      <span className={styles.guestChip} key={guest.guestId}>
-                        <span className={styles.guestChipLabel}>{guest.displayName}</span>
+                  onBlur={() => {
+                    window.setTimeout(() => {
+                      if (searchWrapRef.current && !searchWrapRef.current.contains(document.activeElement)) {
+                        setIsFocused(false);
+                        if (queryTrimmed.length > 0) {
+                          setQuery("");
+                          setOptions([]);
+                          setSearchState("idle");
+                          setHighlightedIndex(-1);
+                          setSearchTone("warning");
+                          setSearchFeedback("Selecione um nome da lista para adicioná-lo.");
+                        }
+                      }
+                    }, 0);
+                  }}
+                  onChange={(event) => {
+                    setIsFocused(true);
+                    const nextValue = event.target.value;
+                    setQuery(nextValue);
+                    const trimmed = nextValue.trim();
+                    if (trimmed.length === 0) {
+                      setOptions([]);
+                      setSearchState("idle");
+                      setHighlightedIndex(-1);
+                      setSearchTone("neutral");
+                      setSearchFeedback(rsvp.labels.guestSearchHelp);
+                    } else if (trimmed.length < 2) {
+                      setOptions([]);
+                      setSearchState("idle");
+                      setHighlightedIndex(-1);
+                      setSearchTone("neutral");
+                      setSearchFeedback(rsvp.labels.guestSearchMinimum);
+                    } else {
+                      setSearchTone("neutral");
+                      setSearchFeedback(rsvp.labels.guestSearchHelp);
+                    }
+                    clearFieldError("guests");
+                    clearSubmissionMessage();
+                  }}
+                  onFocus={() => setIsFocused(true)}
+                  onKeyDown={handleKeyDown}
+                  ref={inputRef}
+                  spellCheck={false}
+                  type="text"
+                  value={query}
+                />
+              </div>
+
+              <p aria-live="polite" className={searchMessageClassName} id="rsvp-guest-search-status" role="status">
+                {visibleSearchMessage}
+              </p>
+              <FieldError field="guests" message={fieldErrors.guests} />
+
+              {queryTrimmed.length >= 2 && options.length > 0 ? (
+                <ul className={styles.guestListbox} id={guestListboxId} role="listbox">
+                  {options.map((guest, index) => (
+                    <li
+                      aria-selected={index === highlightedIndex}
+                      className={index === highlightedIndex ? styles.guestOptionActive : styles.guestOption}
+                      id={`${guestListboxId}-option-${guest.guestId}`}
+                      key={guest.guestId}
+                      onClick={() => addGuest(guest)}
+                      onMouseEnter={() => setHighlightedIndex(index)}
+                      onMouseDown={(event) => event.preventDefault()}
+                      role="option"
+                    >
+                      <span className={styles.guestOptionName}>{guest.displayName}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+
+            <div className={styles.selectedGuestsSection}>
+              <div className={styles.sectionHeading}>
+                <p className={styles.cardLabel}>Pessoas selecionadas</p>
+              </div>
+
+              {selectedGuests.length === 0 ? (
+                <p className={styles.emptySelection}>
+                  Selecione um nome da lista para adicioná-lo.
+                </p>
+              ) : (
+                <div className={styles.selectedGuestsList}>
+                  {selectedGuests.map((guest) => (
+                    <div className={styles.selectedGuestRow} key={guest.guestId}>
+                      <div className={styles.selectedGuestHeader}>
+                        <div className={styles.selectedGuestIdentity}>
+                          <span aria-hidden="true" className={styles.selectedGuestMark}>✓</span>
+                          <div>
+                            <p className={styles.selectedGuestName}>{guest.displayName}</p>
+                            <p className={styles.selectedGuestMeta}>Convidado confirmado na lista privada</p>
+                          </div>
+                        </div>
                         <button
-                          aria-label={`${rsvp.labels.guestSearchRemove} ${guest.displayName}`}
-                          className={styles.guestChipRemove}
+                          aria-label={`Remover ${guest.displayName}`}
+                          className={styles.removeGuestButton}
                           onClick={() => removeGuest(guest.guestId)}
                           type="button"
                         >
-                          ×
+                          Remover
                         </button>
-                      </span>
-                    ))}
+                      </div>
 
-                    <input
-                      aria-activedescendant={highlightedIndex >= 0 && highlightedIndex < guestOptions.length ? `${guestListboxId}-option-${guestOptions[highlightedIndex].guestId}` : undefined}
-                      aria-describedby={[errors.guests ? fieldErrorId("guests") : null, "rsvp-guest-search-help", "rsvp-guest-search-status"]
-                        .filter(Boolean)
-                        .join(" ") || undefined}
-                      aria-invalid={Boolean(errors.guests)}
-                      autoComplete="off"
-                      id={guestSearchId}
-                      maxLength={80}
-                      name="guestSearch"
-                      onBlur={() => {
-                        window.setTimeout(() => {
-                          if (!document.activeElement || !document.activeElement.closest?.(`.${styles.guestCombobox}`)) {
-                            setGuestOptions([]);
-                            setGuestSearchState("idle");
-                            setHighlightedIndex(-1);
-                          }
-                        }, 0);
-                      }}
-                      onChange={(event) => {
-                        setGuestQuery(event.target.value);
-                        clearFieldError("guests");
-                        clearSubmissionMessage();
-                      }}
-                      onKeyDown={handleGuestKeyDown}
-                      ref={guestInputRef}
-                      spellCheck={false}
-                      type="text"
-                      value={guestQuery}
-                    />
-                  </div>
+                      <fieldset className={styles.guestAttendanceFieldset}>
+                        <legend>Confirme a presença</legend>
+                        <div className={styles.guestAttendanceOptions}>
+                          <AttendanceOption
+                            checked={guest.attendance === "yes"}
+                            ariaLabel={`${guest.displayName} - Estará presente`}
+                            label="Estará presente"
+                            name={`attendance-${guest.guestId}`}
+                            onChange={(value) => updateAttendance(guest.guestId, value)}
+                            value="yes"
+                          />
+                          <AttendanceOption
+                            checked={guest.attendance === "no"}
+                            ariaLabel={`${guest.displayName} - Não poderá comparecer`}
+                            label="Não poderá comparecer"
+                            name={`attendance-${guest.guestId}`}
+                            onChange={(value) => updateAttendance(guest.guestId, value)}
+                            value="no"
+                          />
+                        </div>
+                        {attendanceErrors[guest.guestId] ? <p className={styles.fieldError}>{attendanceErrors[guest.guestId]}</p> : null}
+                      </fieldset>
+                    </div>
+                  ))}
                 </div>
-
-                <p className={styles.fieldHint} id="rsvp-guest-search-help">{rsvp.labels.guestSearchHelp}</p>
-                <p className={guestStatusClassName} id="rsvp-guest-search-status" aria-live="polite">
-                  {guestListMessage}
-                </p>
-                <FieldError field="guests" message={errors.guests} />
-
-                {guestQueryTrimmed.length >= 2 && guestSearchState === "results" && guestOptions.length > 0 ? (
-                  <ul className={styles.guestListbox} id={guestListboxId} role="listbox">
-                    {guestOptions.map((guest, index) => (
-                      <li
-                        aria-selected={index === highlightedIndex}
-                        className={index === highlightedIndex ? styles.guestOptionActive : styles.guestOption}
-                        id={`${guestListboxId}-option-${guest.guestId}`}
-                        key={guest.guestId}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onMouseEnter={() => setHighlightedIndex(index)}
-                        onClick={() => addGuest(guest)}
-                        role="option"
-                      >
-                        <span className={styles.guestOptionName}>{guest.displayName}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
+              )}
             </div>
 
             <div className={styles.fieldGrid}>
@@ -417,8 +547,8 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                   <span aria-hidden="true" className={styles.requiredMark}>*</span>
                 </label>
                 <input
-                  aria-describedby={errors.phone ? fieldErrorId("phone") : undefined}
-                  aria-invalid={Boolean(errors.phone)}
+                  aria-describedby={fieldErrors.phone ? fieldErrorId("phone") : undefined}
+                  aria-invalid={Boolean(fieldErrors.phone)}
                   autoComplete="tel"
                   id="rsvp-phone"
                   inputMode="tel"
@@ -427,58 +557,23 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                   required
                   type="tel"
                 />
-                <FieldError field="phone" message={errors.phone} />
+                <FieldError field="phone" message={fieldErrors.phone} />
               </div>
 
               <div className={styles.field}>
                 <label htmlFor="rsvp-email">{rsvp.labels.email}</label>
                 <input
-                  aria-describedby={errors.email ? fieldErrorId("email") : undefined}
-                  aria-invalid={Boolean(errors.email)}
+                  aria-describedby={fieldErrors.email ? fieldErrorId("email") : undefined}
+                  aria-invalid={Boolean(fieldErrors.email)}
                   autoComplete="email"
                   id="rsvp-email"
                   maxLength={160}
                   name="email"
                   type="email"
                 />
-                <FieldError field="email" message={errors.email} />
+                <FieldError field="email" message={fieldErrors.email} />
               </div>
             </div>
-
-            <fieldset
-              aria-describedby={errors.attendance ? fieldErrorId("attendance") : undefined}
-              className={styles.attendanceFieldset}
-            >
-              <legend>
-                {rsvp.labels.attendance}
-                <span aria-hidden="true" className={styles.requiredMark}>*</span>
-              </legend>
-              <div className={styles.attendanceOptions}>
-                <label className={styles.radioOption}>
-                  <input
-                    checked={attendance === "yes"}
-                    name="attendance"
-                    onChange={() => setAttendance("yes")}
-                    required
-                    type="radio"
-                    value="yes"
-                  />
-                  <span>{rsvp.labels.attendanceYes}</span>
-                </label>
-                <label className={styles.radioOption}>
-                  <input
-                    checked={attendance === "no"}
-                    name="attendance"
-                    onChange={() => setAttendance("no")}
-                    required
-                    type="radio"
-                    value="no"
-                  />
-                  <span>{rsvp.labels.attendanceNo}</span>
-                </label>
-              </div>
-              <FieldError field="attendance" message={errors.attendance} />
-            </fieldset>
 
             <div className={[styles.field, styles.messageField].join(" ")}>
               <label htmlFor="rsvp-message">{rsvp.labels.message}</label>

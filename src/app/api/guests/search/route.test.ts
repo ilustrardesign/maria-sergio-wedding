@@ -36,6 +36,12 @@ describe("POST /api/guests/search", () => {
     expect(pedJson).toEqual({ guests: [{ displayName: "Pedro Ivo", guestId: "demo-pedro" }] });
     expect(fetchSpy).not.toHaveBeenCalled();
 
+    const joaResponse = await POST(request("joa"));
+    const joaJson = await joaResponse.json();
+    expect(joaResponse.status).toBe(200);
+    expect(joaJson).toEqual({ guests: [{ displayName: "João Evangelista", guestId: "demo-joao" }] });
+    expect(fetchSpy).not.toHaveBeenCalled();
+
     const katResponse = await POST(request("kat"));
     const katJson = await katResponse.json();
     expect(katResponse.status).toBe(200);
@@ -72,19 +78,27 @@ describe("POST /api/guests/search", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
-  it("não usa mock demo em produção quando endpoint está ativo", async () => {
+  it("não usa mock demo em produção mesmo com NEXT_PUBLIC_RSVP_MODE=demo", async () => {
     process.env = {
       ...originalEnv,
-      NEXT_PUBLIC_RSVP_MODE: "endpoint",
+      NEXT_PUBLIC_RSVP_MODE: "demo",
       NODE_ENV: "production",
+      RSVP_APPS_SCRIPT_URL: "https://script.example.test/exec",
+      RSVP_SHARED_SECRET: "secret",
     };
 
-    const fetchSpy = vi.fn();
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      json: () => Promise.resolve({
+        ok: true,
+        guests: [{ displayName: "Pedro Ivo", guestId: "guest-pedro" }],
+      }),
+      ok: true,
+    });
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await POST(request("ped"));
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ guests: [] });
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ guests: [{ displayName: "Pedro Ivo", guestId: "guest-pedro" }] });
+    expect(fetchSpy).toHaveBeenCalledOnce();
   });
 });

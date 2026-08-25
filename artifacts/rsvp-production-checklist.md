@@ -12,7 +12,7 @@ Status: BLOCKED
 ## Required behavior
 
 - Search must return only private registry matches.
-- The browser must only submit `selectedGuestIds`.
+- The browser must only submit `guests: [{ guestId, attendance }]`.
 - Apps Script must reject any invalid ID set.
 - Canonical names must be written from the registry.
 - The full registry must never be shipped to the browser.
@@ -39,6 +39,6 @@ Expected endpoints:
 3. Select `Pedro Ivo`.
 4. Type `kat`.
 5. Select `Katherine`.
-6. Remove one chip.
+6. Mark Pedro as present and Katherine as not attending.
 7. Type an unknown name.
-8. Confirm no free-text chip can be created.
+8. Confirm no free text can become a selected person.

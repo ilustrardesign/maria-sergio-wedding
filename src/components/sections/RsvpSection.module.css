@@ -242,6 +242,56 @@
   border-color: var(--color-error);
 }
 
+.searchBlock {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.searchLabel {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: var(--color-olive-dark);
+  font-family: var(--font-functional);
+  font-size: 0.73rem;
+  font-weight: 650;
+  letter-spacing: 0.115em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.searchInputFrame {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 32%, transparent);
+  background: rgb(255 255 255 / 38%);
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease;
+}
+
+.searchInputFrame:focus-within {
+  border-color: var(--color-olive-dark);
+  background: var(--color-warm-white);
+  box-shadow: 0 0 0 3px rgb(116 123 85 / 16%);
+}
+
+.searchInputFrame input {
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.72rem 0.85rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-charcoal);
+  font-family: var(--font-functional);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.searchInputFrame input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .field input:disabled,
 .readOnlyCard input {
   border-color: rgb(109 106 97 / 18%);
@@ -392,26 +442,189 @@
   white-space: nowrap;
 }
 
-.guestStatus {
+.searchStatus {
   margin: 0.45rem 0 0;
-  color: var(--color-warm-gray);
   font-family: var(--font-functional);
   font-size: 0.78rem;
   line-height: 1.45;
 }
 
-.guestStatus.loading,
-.guestStatus.results {
-  color: var(--color-olive);
-}
-
-.guestStatus.empty,
-.guestStatus.to-short {
+.neutral {
   color: var(--color-warm-gray);
 }
 
-.guestStatus.error {
+.loading {
+  color: var(--color-olive);
+}
+
+.warning {
+  color: color-mix(in srgb, var(--color-gold) 68%, var(--color-charcoal));
+}
+
+.error {
   color: var(--color-error);
+}
+
+.success {
+  color: var(--color-olive);
+}
+
+.selectedGuestsSection {
+  margin-bottom: 2rem;
+}
+
+.sectionHeading {
+  margin-bottom: 0.75rem;
+}
+
+.emptySelection {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border: 1px dashed color-mix(in srgb, var(--color-olive) 24%, transparent);
+  background: rgb(255 255 255 / 24%);
+  color: var(--color-warm-gray);
+  font-family: var(--font-reading);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.selectedGuestsList {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.selectedGuestRow {
+  padding: 1rem 1.05rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 24%, transparent);
+  background: rgb(255 255 255 / 30%);
+}
+
+.selectedGuestHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.selectedGuestIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.selectedGuestMark {
+  display: inline-grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 34%, transparent);
+  color: var(--color-olive-dark);
+  font-size: 0.82rem;
+}
+
+.selectedGuestName {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-family: var(--font-reading);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.selectedGuestMeta {
+  margin: 0.2rem 0 0;
+  color: var(--color-warm-gray);
+  font-family: var(--font-functional);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.removeGuestButton {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--color-error) 22%, transparent);
+  background: transparent;
+  color: var(--color-error);
+  font-family: var(--font-functional);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.removeGuestButton:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+.guestAttendanceFieldset {
+  margin: 1rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.guestAttendanceFieldset legend {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: var(--color-olive-dark);
+  font-family: var(--font-functional);
+  font-size: 0.73rem;
+  font-weight: 650;
+  letter-spacing: 0.115em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.guestAttendanceOptions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.attendanceOption {
+  display: flex;
+  min-height: 3.45rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--color-olive) 26%, transparent);
+  background: rgb(255 255 255 / 32%);
+  color: var(--color-charcoal);
+  cursor: pointer;
+}
+
+.attendanceOption:hover {
+  border-color: var(--color-olive);
+  background: rgb(255 255 255 / 58%);
+}
+
+.attendanceOption:has(input:checked) {
+  border-color: var(--color-olive-dark);
+  background: color-mix(in srgb, var(--color-sage) 27%, var(--color-warm-white));
+}
+
+.attendanceOption:has(input:focus-visible) {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+.attendanceOption input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--color-olive-dark);
+}
+
+.attendanceOption span {
+  font-family: var(--font-reading);
+  font-size: 0.96rem;
+  line-height: 1.35;
 }
 
 .cardLabel {
@@ -730,8 +943,8 @@
   }
 
   .fieldGrid,
-  .inviteLookup,
-  .attendanceOptions,
+  .searchBlock,
+  .guestAttendanceOptions,
   .actionRow {
     grid-template-columns: 1fr;
   }
@@ -742,6 +955,18 @@
 
   .attendanceOptions {
     gap: 0.65rem;
+  }
+
+  .selectedGuestHeader {
+    flex-direction: column;
+  }
+
+  .removeGuestButton {
+    width: 100%;
+  }
+
+  .guestAttendanceOptions {
+    grid-template-columns: 1fr;
   }
 
   .validateButton {

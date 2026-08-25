@@ -14,9 +14,9 @@ const GUEST_HEADERS = [
 
 const RESPONSE_HEADERS = [
   "received_at",
-  "attendance",
   "selected_guest_ids",
   "selected_guest_display_names",
+  "selected_guest_attendance",
   "phone",
   "email",
   "message",
@@ -130,30 +130,36 @@ function handleSubmit_(body) {
   ensureHeaders_(guestsSheet, GUEST_HEADERS);
   ensureHeaders_(responsesSheet, RESPONSE_HEADERS);
 
-  const selectedGuestIds = Array.isArray(body.selectedGuestIds)
-    ? body.selectedGuestIds.map((guestId) => clean_(guestId, 80)).filter(Boolean)
+  const guests = Array.isArray(body.guests)
+    ? body.guests.map((guest) => {
+        const isObject = guest && typeof guest === "object";
+        const attendance = isObject ? clean_(guest.attendance, 4) : "";
+        return {
+          attendance: attendance === "yes" || attendance === "no" ? attendance : "",
+          guestId: isObject ? clean_(guest.guestId, 80) : "",
+        };
+      })
     : [];
-  const attendance = clean_(body.attendance, 4);
   const phone = clean_(body.phone, 30);
   const email = clean_(body.email, 160);
   const message = clean_(body.message, 800);
   const receivedAt = clean_(body.receivedAt, 80) || new Date().toISOString();
 
-  if (selectedGuestIds.length === 0 || !phone || (attendance !== "yes" && attendance !== "no")) {
+  if (guests.length === 0 || !phone || guests.some((guest) => !guest.guestId || !guest.attendance)) {
     return json_({ ok: false, message: "Campos obrigatórios ausentes." }, 400);
   }
 
   const guestRows = readSheetRows_(guestsSheet, GUEST_HEADERS);
-  const validation = validateSelectedGuestIds_(guestRows, selectedGuestIds);
+  const validation = validateGuests_(guestRows, guests);
   if (!validation.ok) {
     return json_({ ok: false, message: "Convidado inválido." }, 400);
   }
 
   responsesSheet.appendRow([
     receivedAt,
-    attendance,
     validation.selectedGuests.map((guest) => guest.guestId).join(","),
     validation.selectedGuests.map((guest) => guest.displayName).join(", "),
+    validation.selectedGuests.map((guest) => guest.attendance).join(","),
     phone,
     email,
     message,
@@ -178,31 +184,96 @@ function searchGuests_(rows, query) {
       const displayName = clean_(row.display_name, 180);
       const rawName = clean_(row.raw_name, 180);
       const searchable = normalizeForSearch_(displayName + " " + rawName);
+      const words = searchable.split(" ").filter(Boolean);
       return {
         displayName: displayName,
         guestId: clean_(row.guest_id, 80),
-        score: searchable.indexOf(normalizedQuery),
+        score: searchGuestRank_(searchable, words, normalizedQuery),
       };
     })
-    .filter((row) => row.guestId && row.displayName && row.score >= 0)
+    .filter((row) => row.guestId && row.displayName && row.score !== null)
     .sort((a, b) => a.score - b.score || a.displayName.localeCompare(b.displayName))
     .slice(0, MAX_SEARCH_RESULTS)
     .map((row) => ({ guestId: row.guestId, displayName: row.displayName }));
 }
 
-function validateSelectedGuestIds_(rows, selectedGuestIds) {
+function searchGuestRank_(searchable, words, query) {
+  if (query.length < MIN_SEARCH_CHARS) return null;
+
+  if (searchable === query) return 0;
+  if (searchable.indexOf(query) === 0) return 10;
+  for (let index = 0; index < words.length; index += 1) {
+    if (words[index].indexOf(query) === 0) return 20;
+  }
+  if (searchable.indexOf(query) >= 0) return 30;
+
+  if (query.length < 4) return null;
+
+  const maxDistance = query.length <= 5 ? 2 : 2;
+  const candidates = [searchable].concat(words);
+  let best = maxDistance + 1;
+  for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex += 1) {
+    const candidate = candidates[candidateIndex];
+    if (!candidate || candidate.length < Math.max(3, query.length - maxDistance)) continue;
+    if (candidate.length > query.length + maxDistance) {
+      for (let offset = 0; offset <= candidate.length - query.length; offset += 1) {
+        best = Math.min(best, boundedDistance_(query, candidate.slice(offset, offset + query.length), maxDistance));
+      }
+    } else {
+      best = Math.min(best, boundedDistance_(query, candidate, maxDistance));
+    }
+    if (best <= maxDistance) break;
+  }
+
+  return best <= maxDistance ? 50 + best : null;
+}
+
+function boundedDistance_(source, target, maxDistance) {
+  if (Math.abs(source.length - target.length) > maxDistance) return maxDistance + 1;
+
+  const previous = [];
+  for (let index = 0; index <= target.length; index += 1) {
+    previous.push(index);
+  }
+
+  for (let sourceIndex = 1; sourceIndex <= source.length; sourceIndex += 1) {
+    const current = [sourceIndex];
+    let rowMin = sourceIndex;
+    for (let targetIndex = 1; targetIndex <= target.length; targetIndex += 1) {
+      const substitutionCost = source.charAt(sourceIndex - 1) === target.charAt(targetIndex - 1) ? 0 : 1;
+      const value = Math.min(
+        previous[targetIndex] + 1,
+        current[targetIndex - 1] + 1,
+        previous[targetIndex - 1] + substitutionCost,
+      );
+      current[targetIndex] = value;
+      rowMin = Math.min(rowMin, value);
+    }
+
+    if (rowMin > maxDistance) return maxDistance + 1;
+    previous.splice(0, previous.length);
+    Array.prototype.push.apply(previous, current);
+  }
+
+  return previous[target.length];
+}
+
+function validateGuests_(rows, guests) {
   const seen = {};
   const selectedGuests = [];
 
-  for (let index = 0; index < selectedGuestIds.length; index += 1) {
-    const guestId = selectedGuestIds[index];
+  for (let index = 0; index < guests.length; index += 1) {
+    const guestId = guests[index].guestId;
+    const attendance = guests[index].attendance;
     if (!guestId || seen[guestId]) return { ok: false };
     seen[guestId] = true;
 
     const guest = rows.find((row) => clean_(row.guest_id, 80) === guestId);
     if (!guest || !isSelectableGuest_(guest)) return { ok: false };
+    if (attendance !== "yes" && attendance !== "no") return { ok: false };
 
     selectedGuests.push({
+      attendance: attendance,
       guestId: clean_(guest.guest_id, 80),
       displayName: clean_(guest.display_name, 180),
     });
@@ -267,7 +338,7 @@ function clean_(value, maxLength) {
 }
 
 function normalizeForSearch_(value) {
-  return clean_(value, 180).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  return clean_(value, 180).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function isPlaceholderName_(value) {

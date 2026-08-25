@@ -1,14 +1,13 @@
 import { renderRsvpAdminEmail } from "@/emails/RsvpAdminEmail";
 import { renderRsvpGuestEmail } from "@/emails/RsvpGuestEmail";
-import type { GuestSelection } from "@/lib/guests";
+import type { SelectedGuestAttendance } from "@/lib/guests";
 
 type RsvpEmailInput = {
-  attendance: "yes" | "no";
   email: string;
   message: string;
   phone: string;
   receivedAt: string;
-  selectedGuests: GuestSelection[];
+  selectedGuests: SelectedGuestAttendance[];
 };
 
 type RsvpEmailStatus = "sent" | "failed" | "skipped";
@@ -67,7 +66,7 @@ export async function sendRsvpEmails(input: RsvpEmailInput): Promise<RsvpEmailRe
   if (!apiKey) return { attempted: false, admin: "skipped", guest: "skipped", sent: false };
 
   const adminEmail = renderRsvpAdminEmail(input);
-  const guestEmail = input.email ? renderRsvpGuestEmail({ attendance: input.attendance, selectedGuests: input.selectedGuests }) : null;
+  const guestEmail = input.email ? renderRsvpGuestEmail({ selectedGuests: input.selectedGuests }) : null;
   const replyTo = input.email ? [input.email] : [defaultReplyTo()];
 
   let admin: RsvpEmailStatus = "skipped";

@@ -16,12 +16,36 @@ export type GuestRegistryRow = {
   side?: string;
 };
 
+export type NormalizedGuestRegistryRow = {
+  active: boolean;
+  display_name: string;
+  guest_id: string;
+  guardian_guest_id: string;
+  is_baby: boolean;
+  is_child: boolean;
+  needs_review: boolean;
+  raw_name: string;
+  rsvp_required: boolean;
+  side: string;
+};
+
 export type GuestSearchResult = GuestSelection;
 
 export type GuestSearchResponse = GuestSearchResult[];
 
 export type GuestSearchApiResponse = {
   guests: GuestSearchResponse;
+};
+
+export type GuestAttendance = "yes" | "no";
+
+export type SelectedGuestAttendance = GuestSelection & {
+  attendance: GuestAttendance;
+};
+
+export type RsvpGuestSubmission = {
+  attendance: GuestAttendance;
+  guestId: string;
 };
 
 export type GuestSearchRegistryResult =
@@ -36,15 +60,10 @@ export type GuestSearchRegistryResult =
     };
 
 export type RsvpSubmissionPayload = {
-  attendance: "yes" | "no";
   email: string;
+  guests: RsvpGuestSubmission[];
   message: string;
   phone: string;
-  selectedGuestIds: string[];
-};
-
-export type ValidatedGuestSelection = GuestSelection & {
-  attendance: "yes" | "no";
 };
 
 export const GUEST_SEARCH_MIN_CHARS = 2;
@@ -55,14 +74,19 @@ export function cleanText(value: unknown, maxLength: number) {
 }
 
 export function normalizeSearchText(value: string) {
+  return normalizeGuestSearchTerm(value);
+}
+
+export function normalizeGuestSearchTerm(value: string) {
   return value
+    .trim()
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
-    .trim();
+    .replace(/\s+/g, " ");
 }
 
-export function normalizeGuestRows(rows: GuestRegistryRow[]) {
+export function normalizeGuestRows(rows: GuestRegistryRow[]): NormalizedGuestRegistryRow[] {
   return rows.map((row) => {
     const rawName = cleanText(row.raw_name, 180);
     const displayName = cleanText(row.display_name, 180) || rawName.replace(/\*+$/g, "").trim();
@@ -84,7 +108,7 @@ export function normalizeGuestRows(rows: GuestRegistryRow[]) {
   });
 }
 
-function guestIsSelectable(row: GuestRegistryRow) {
+function guestIsSelectable(row: NormalizedGuestRegistryRow) {
   return row.active && row.rsvp_required && !row.needs_review && !row.is_baby && !row.is_child;
 }
 
@@ -92,12 +116,19 @@ function demoGuestRows(): GuestRegistryRow[] {
   return [
     { active: true, display_name: "Pedro Ivo", guest_id: "demo-pedro", is_child: false, needs_review: false, raw_name: "Pedro Ivo", rsvp_required: true, side: "Noivo" },
     { active: true, display_name: "Katherine", guest_id: "demo-katherine", is_child: false, needs_review: false, raw_name: "Katherine", rsvp_required: true, side: "Noiva" },
+    { active: true, display_name: "João Evangelista", guest_id: "demo-joao", is_child: false, needs_review: false, raw_name: "João Evangelista", rsvp_required: true, side: "Demo" },
+    { active: true, display_name: "Sérgio Teste", guest_id: "demo-sergio", is_child: false, needs_review: false, raw_name: "Sérgio Teste", rsvp_required: true, side: "Demo" },
+    { active: true, display_name: "Catharina Teste", guest_id: "demo-catharina", is_child: false, needs_review: false, raw_name: "Catharina Teste", rsvp_required: true, side: "Demo" },
     { active: true, display_name: "Maria Teste", guest_id: "demo-maria", is_child: false, needs_review: false, raw_name: "Maria Teste", rsvp_required: true, side: "Amigos" },
     { active: true, display_name: "Lucas", guest_id: "demo-lucas-1", is_child: true, needs_review: false, raw_name: "Lucas*", rsvp_required: false, side: "Família" },
   ];
 }
 
-function getRsvpMode() {
+export function getDemoGuestRows() {
+  return demoGuestRows();
+}
+
+export function getRsvpMode() {
   const configuredMode = process.env.NEXT_PUBLIC_RSVP_MODE;
   if (process.env.NODE_ENV === "production") return "endpoint";
   return configuredMode === "demo" || configuredMode === "endpoint" ? configuredMode : "endpoint";
@@ -110,33 +141,92 @@ function getAppsScriptConfig() {
   };
 }
 
+function boundedDistanceWithin(source: string, target: string, maxDistance: number) {
+  if (Math.abs(source.length - target.length) > maxDistance) return maxDistance + 1;
+
+  const previous = Array.from({ length: target.length + 1 }, (_, index) => index);
+  for (let sourceIndex = 1; sourceIndex <= source.length; sourceIndex += 1) {
+    const current = [sourceIndex];
+    let rowMin = current[0];
+
+    for (let targetIndex = 1; targetIndex <= target.length; targetIndex += 1) {
+      const substitutionCost = source[sourceIndex - 1] === target[targetIndex - 1] ? 0 : 1;
+      const value = Math.min(
+        previous[targetIndex] + 1,
+        current[targetIndex - 1] + 1,
+        previous[targetIndex - 1] + substitutionCost,
+      );
+      current[targetIndex] = value;
+      rowMin = Math.min(rowMin, value);
+    }
+
+    if (rowMin > maxDistance) return maxDistance + 1;
+    previous.splice(0, previous.length, ...current);
+  }
+
+  return previous[target.length];
+}
+
+function fuzzyRank(searchable: string, words: string[], query: string) {
+  if (query.length < 4) return null;
+
+  const maxDistance = query.length <= 5 ? 2 : 2;
+  const candidates = [searchable, ...words].filter((candidate) => candidate.length >= Math.max(3, query.length - maxDistance));
+  const bestDistance = candidates.reduce((best, candidate) => {
+    if (candidate.length > query.length + maxDistance) {
+      const windows = Array.from({ length: candidate.length - query.length + 1 }, (_, index) => candidate.slice(index, index + query.length));
+      return Math.min(best, ...windows.map((window) => boundedDistanceWithin(query, window, maxDistance)));
+    }
+
+    return Math.min(best, boundedDistanceWithin(query, candidate, maxDistance));
+  }, maxDistance + 1);
+
+  return bestDistance <= maxDistance ? 50 + bestDistance : null;
+}
+
+function searchRank(row: NormalizedGuestRegistryRow, query: string) {
+  const searchable = normalizeGuestSearchTerm(`${row.display_name} ${row.raw_name}`);
+  const displayName = normalizeGuestSearchTerm(row.display_name);
+  const words = searchable.split(" ").filter(Boolean);
+
+  if (displayName === query || searchable === query) return 0;
+  if (displayName.startsWith(query) || searchable.startsWith(query)) return 10;
+  if (words.some((word) => word.startsWith(query))) return 20;
+  if (searchable.includes(query)) return 30;
+
+  return fuzzyRank(searchable, words, query);
+}
+
 export function searchGuestRows(rows: GuestRegistryRow[], query: string, limit = GUEST_SEARCH_MAX_RESULTS): GuestSearchResult[] {
-  const normalizedQuery = normalizeSearchText(query);
+  const normalizedQuery = normalizeGuestSearchTerm(query);
   if (normalizedQuery.length < GUEST_SEARCH_MIN_CHARS) return [];
 
   return normalizeGuestRows(rows)
     .filter(guestIsSelectable)
-    .filter((row) => {
-      const searchable = normalizeSearchText(`${row.display_name} ${row.raw_name}`);
-      return searchable.includes(normalizedQuery);
+    .map((row) => ({ rank: searchRank(row, normalizedQuery), row }))
+    .filter((item): item is { rank: number; row: NormalizedGuestRegistryRow } => item.rank !== null)
+    .sort((left, right) => {
+      if (left.rank !== right.rank) return left.rank - right.rank;
+      return left.row.display_name.localeCompare(right.row.display_name, "pt-BR");
     })
     .slice(0, limit)
-    .map((row) => ({ displayName: row.display_name, guestId: row.guest_id }));
+    .map(({ row }) => ({ displayName: row.display_name, guestId: row.guest_id }));
 }
 
 export function searchDemoGuests(query: string): GuestSearchResult[] {
   return searchGuestRows(demoGuestRows(), query);
 }
 
-export function validateSelectedGuestIds(rows: GuestRegistryRow[], selectedGuestIds: string[]) {
+export function validateRsvpGuests(rows: GuestRegistryRow[], guests: RsvpGuestSubmission[]) {
   const normalizedRows = normalizeGuestRows(rows);
   const byId = new Map(normalizedRows.map((row) => [row.guest_id, row]));
   const uniqueIds = new Set<string>();
-  const selectedGuests: GuestSelection[] = [];
+  const selectedGuests: SelectedGuestAttendance[] = [];
 
-  for (const guestId of selectedGuestIds) {
-    const cleanGuestId = cleanText(guestId, 100);
-    if (!cleanGuestId || uniqueIds.has(cleanGuestId)) {
+  for (const guest of guests) {
+    const cleanGuestId = cleanText(guest?.guestId, 100);
+    const attendance = guest?.attendance;
+    if (!cleanGuestId || uniqueIds.has(cleanGuestId) || (attendance !== "yes" && attendance !== "no")) {
       return { ok: false as const };
     }
 
@@ -146,7 +236,7 @@ export function validateSelectedGuestIds(rows: GuestRegistryRow[], selectedGuest
     }
 
     uniqueIds.add(cleanGuestId);
-    selectedGuests.push({ displayName: row.display_name, guestId: row.guest_id });
+    selectedGuests.push({ attendance, displayName: row.display_name, guestId: row.guest_id });
   }
 
   if (selectedGuests.length === 0) {

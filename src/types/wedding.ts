@@ -104,9 +104,6 @@ export interface RsvpFieldLabels {
   guestSearchRemove: string;
   phone: string;
   email: string;
-  attendance: string;
-  attendanceYes: string;
-  attendanceNo: string;
   message: string;
   submit: string;
   submitting: string;

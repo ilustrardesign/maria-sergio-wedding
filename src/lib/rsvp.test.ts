@@ -3,11 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { submitRsvp, type RsvpPayload } from "./rsvp";
 
 const payload: RsvpPayload = {
-  attendance: "yes",
   email: "maria@example.com",
   message: "",
   phone: "+55 83 99999-9999",
-  selectedGuestIds: ["guest-1"],
+  guests: [{ attendance: "yes", guestId: "guest-1" }],
 };
 
 afterEach(() => {
@@ -15,17 +14,46 @@ afterEach(() => {
 });
 
 describe("submitRsvp", () => {
-  it("não faz requisição nem alega persistência sem endpoint", async () => {
+  it("usa /api/rsvp por padrão e aceita resposta demo", async () => {
     const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
-    await expect(submitRsvp(payload, "")).resolves.toEqual({ mode: "demo", submitted: false });
-    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.stubGlobal("fetch", fetchSpy.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        adminEmail: "skipped",
+        emailNotificationSent: false,
+        guestEmail: "skipped",
+        id: null,
+        mode: "demo",
+        persisted: false,
+        submitted: true,
+      }),
+    }));
+
+    await expect(submitRsvp(payload)).resolves.toEqual({
+      adminEmail: "skipped",
+      emailNotificationSent: false,
+      guestEmail: "skipped",
+      id: null,
+      mode: "demo",
+      persisted: false,
+      submitted: true,
+    });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(fetchSpy.mock.calls[0][0]).toBe("/api/rsvp");
   });
 
   it("só confirma envio após resposta válida do endpoint", async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({ ok: true });
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ adminEmail: "sent", guestEmail: "skipped", id: "row-1" }) });
     vi.stubGlobal("fetch", fetchSpy);
-    await expect(submitRsvp(payload, "https://example.test/rsvp")).resolves.toEqual({ mode: "endpoint", submitted: true });
+    await expect(submitRsvp(payload, "https://example.test/rsvp")).resolves.toEqual({
+      adminEmail: "sent",
+      emailNotificationSent: false,
+      guestEmail: "skipped",
+      id: "row-1",
+      mode: "endpoint",
+      persisted: true,
+      submitted: true,
+    });
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 

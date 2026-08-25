@@ -15,8 +15,8 @@ The RSVP now works through a private guest registry and server-side search.
 1. User types a query.
 2. The server returns up to 8 matching guests.
 3. User selects only returned results.
-4. The browser submits `attendance`, `selectedGuestIds`, `phone`, `email`, and `message`.
-5. The server validates each `guestId` again and writes canonical names to Sheets.
+4. The browser submits `guests: [{ guestId, attendance }]`, `phone`, `email`, and `message`.
+5. The server validates each `guestId` and attendance again and writes canonical names to Sheets.
 
 ## Rejection cases
 

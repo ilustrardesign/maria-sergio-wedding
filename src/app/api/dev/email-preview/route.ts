@@ -6,22 +6,25 @@ import { renderRsvpGuestEmail } from "@/emails/RsvpGuestEmail";
 export const runtime = "nodejs";
 
 function renderPreview(template: string) {
-  if (template === "guest-yes") {
-    return renderRsvpGuestEmail({ attendance: "yes", selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }] });
+  if (template === "guest-single-yes") {
+    return renderRsvpGuestEmail({ selectedGuests: [{ attendance: "yes", displayName: "Maria Silva", guestId: "guest-1" }] });
   }
 
-  if (template === "guest-no") {
-    return renderRsvpGuestEmail({ attendance: "no", selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }] });
+  if (template === "guest-mixed") {
+    return renderRsvpGuestEmail({ selectedGuests: [{ attendance: "yes", displayName: "Pedro Ivo", guestId: "guest-1" }, { attendance: "no", displayName: "Katherine", guestId: "guest-2" }] });
   }
 
-  if (template === "admin") {
+  if (template === "guest-all-no") {
+    return renderRsvpGuestEmail({ selectedGuests: [{ attendance: "no", displayName: "Maria Silva", guestId: "guest-1" }] });
+  }
+
+  if (template === "admin-mixed") {
     return renderRsvpAdminEmail({
-      attendance: "yes",
       email: "maria@example.com",
       message: "Até lá",
       phone: "+55 83 99999-9999",
       receivedAt: "2026-08-24T12:00:00.000Z",
-      selectedGuests: [{ displayName: "Maria Silva", guestId: "guest-1" }],
+      selectedGuests: [{ attendance: "yes", displayName: "Pedro Ivo", guestId: "guest-1" }, { attendance: "no", displayName: "Katherine", guestId: "guest-2" }],
     });
   }
 
@@ -34,7 +37,7 @@ export function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const template = url.searchParams.get("template") || "guest-yes";
+  const template = url.searchParams.get("template") || "guest-single-yes";
   const preview = renderPreview(template);
 
   if (!preview) {
