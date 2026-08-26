@@ -137,7 +137,7 @@ export const weddingContent = {
     {
       id: "ceremony",
       eyebrow: "Cerimônia",
-      name: "Paróquia Nossa Senhora de Nazaré",
+      name: "Nossa Senhora de Nazaré",
       city: confirmed("Cabedelo"),
       region: confirmed("Paraíba"),
       time: confirmed("15:30"),
@@ -153,7 +153,7 @@ export const weddingContent = {
       name: "Buffet Doce Mel",
       city: confirmed("João Pessoa"),
       region: confirmed("Paraíba"),
-      time: pending(""),
+      time: confirmed("17:30"),
       address: confirmed("Rua Manuel Miguel Morais, 54 — Bancários, João Pessoa"),
       note: confirmed("Depois do sim, a celebração continua."),
       directionsUrl: pending("BLOCKED — exact Google Maps URL required from user"),
@@ -207,8 +207,8 @@ export const weddingContent = {
     maxGuests: pending<number>(""),
     labels: {
       guestSearch: "Quem está confirmando presença?",
-      guestSearchHelp: "",
-      guestSearchLoading: "Buscando...",
+      guestSearchHelp: "Digite seu nome e aguarde alguns instantes enquanto localizamos seu convite.",
+      guestSearchLoading: "Buscando seu nome…",
       guestSearchMinimum: "",
       guestSearchEmpty: "Não encontramos esse nome.",
       guestSearchSelected: "Convidado selecionado",

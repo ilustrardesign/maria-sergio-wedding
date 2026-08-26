@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AudioController, type AudioControllerHandle } from "@/components/AudioController";
 import { Navigation } from "@/components/Navigation";
@@ -17,6 +17,7 @@ import { StorySection } from "@/components/sections/StorySection";
 import { TravelSection } from "@/components/sections/TravelSection";
 import { VenuesSection } from "@/components/sections/VenuesSection";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { warmGuestSearch } from "@/lib/guests";
 import type { WeddingContent } from "@/types/wedding";
 
 type WeddingExperienceProps = { content: WeddingContent };
@@ -32,6 +33,21 @@ export function WeddingExperience({ content }: WeddingExperienceProps) {
   }, [content.audio.enabled]);
 
   useScrollReveal(mainRef, opened);
+
+  useEffect(() => {
+    if (!opened || !content.features.showRsvp) return;
+    if (window.sessionStorage.getItem("maria-sergio-rsvp-warmup")) return;
+    window.sessionStorage.setItem("maria-sergio-rsvp-warmup", "1");
+    const controller = new AbortController();
+    const warm = () => { void warmGuestSearch("/api/guests/search", controller.signal).catch(() => undefined); };
+    const idleWindow = window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number; cancelIdleCallback?: (handle: number) => void };
+    if (idleWindow.requestIdleCallback) {
+      const idle = idleWindow.requestIdleCallback(warm, { timeout: 1800 });
+      return () => { controller.abort(); idleWindow.cancelIdleCallback?.(idle); };
+    }
+    const timeout = window.setTimeout(warm, 700);
+    return () => { controller.abort(); window.clearTimeout(timeout); };
+  }, [content.features.showRsvp, opened]);
 
   return (
     <div className="site-shell">

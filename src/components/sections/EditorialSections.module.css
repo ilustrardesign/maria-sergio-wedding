@@ -32,7 +32,8 @@
   object-fit: cover;
   object-position: center;
   filter: saturate(0.94) contrast(0.98) brightness(0.96);
-  transform: scale(1.004);
+  transform: scale(1.045);
+  animation: hero-ken-burns 24s var(--ease-silk) infinite alternate;
 }
 .heroVeil {
   position: absolute;
@@ -41,6 +42,13 @@
   background:
     linear-gradient(90deg, rgb(253 251 246 / 58%) 0 20%, rgb(253 251 246 / 34%) 35%, rgb(253 251 246 / 0%) 56%),
     linear-gradient(180deg, rgb(33 36 24 / 2%) 0%, transparent 48%, rgb(33 36 24 / 16%) 100%);
+}
+.heroVeil::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(52vw, 50rem);
+  background: linear-gradient(90deg, rgb(224 219 208 / 76%) 0%, rgb(232 226 214 / 48%) 30%, rgb(240 235 224 / 22%) 61%, transparent 100%);
+  content: "";
 }
 .heroInner {
   position: relative;
@@ -67,6 +75,15 @@
   background: var(--color-gold);
   content: "";
 }
+.heroStagger {
+  opacity: 0;
+  animation: hero-copy-in 800ms var(--ease-editorial) forwards;
+}
+.heroEyebrow.heroStagger { animation-delay: 120ms; }
+.heroCopy h1 .heroStagger:nth-child(1) { animation-delay: 260ms; }
+.heroCopy h1 .heroStagger:nth-child(2) { animation-delay: 380ms; }
+.heroRule.heroStagger { animation-delay: 510ms; }
+.heroLocation.heroStagger { animation-delay: 620ms; }
 .heroEyebrow, .heroLocation {
   color: var(--color-olive-dark);
   font-family: var(--font-functional);
@@ -85,6 +102,7 @@
   letter-spacing: 0;
   line-height: 0.76;
 }
+.heroCopy h1 span { display: block; white-space: nowrap; }
 .heroRule { display: flex; align-items: center; width: min(100%, 18rem); height: 1.4rem; }
 .heroRule::before, .heroRule::after { height: 1px; background: var(--color-gold); content: ""; }
 .heroRule::before { flex: 1; }
@@ -97,17 +115,19 @@
   left: 50%;
   z-index: 3;
   display: grid;
-  justify-items: center;
+  width: 3rem;
+  height: 4.2rem;
+  place-items: center;
   color: rgb(253 251 246 / 84%);
-  font-family: var(--font-functional);
-  font-size: 0.6rem;
-  letter-spacing: 0.22em;
   text-decoration: none;
-  text-transform: uppercase;
   transform: translateX(-50%);
   text-shadow: 0 1px 10px rgb(33 36 24 / 44%);
+  animation: scroll-cue-breathe 2.8s ease-in-out infinite;
 }
-.scrollCue i { display: block; width: 1px; height: 2.4rem; margin-top: 0.45rem; background: linear-gradient(var(--color-gold), transparent); }
+.scrollCue i { display: block; width: 0.75rem; height: 0.75rem; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg) translate(-0.15rem, -0.15rem); }
+@keyframes hero-ken-burns { from { transform: scale(1.045); } to { transform: scale(1.09) translate3d(0.7%, -0.5%, 0); } }
+@keyframes scroll-cue-breathe { 0%, 100% { opacity: 0.58; transform: translateX(-50%) translateY(0); } 50% { opacity: 0.94; transform: translateX(-50%) translateY(0.35rem); } }
+@keyframes hero-copy-in { from { opacity: 0; transform: translateY(0.7rem); } to { opacity: 1; transform: translateY(0); } }
 
 .countdownSection { overflow: hidden; background: linear-gradient(180deg, var(--color-ivory), var(--color-warm-white)); }
 .countdown { display: grid; max-width: 61rem; margin: clamp(3rem, 7vw, 5.5rem) auto 0; grid-template-columns: repeat(4, 1fr); }
@@ -191,17 +211,25 @@
 
 .venuesSection { overflow: hidden; background: linear-gradient(180deg, #eef2ea, #f4f0e5); }
 .venueGrid { display: grid; margin-top: clamp(4rem, 8vw, 7rem); grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.5rem, 4vw, 4rem); }
-.venueCard { display: grid; overflow: hidden; border: 1px solid rgb(116 123 85 / 18%); background: var(--color-warm-white); box-shadow: var(--shadow-paper); }
-.venueVisual { position: relative; min-height: 30rem; overflow: hidden; background: linear-gradient(var(--color-blue), var(--color-sand)); }
-.venueVisual img { object-fit: cover; object-position: center 51%; filter: saturate(0.86) contrast(0.98); transform: scale(1.02); }
+.venueCard { display: grid; grid-template-rows: auto 1fr; overflow: hidden; border: 1px solid rgb(116 123 85 / 18%); background: var(--color-warm-white); box-shadow: var(--shadow-paper); }
+.venueVisual { position: relative; min-height: 25rem; aspect-ratio: 1.12 / 1; overflow: hidden; background: linear-gradient(var(--color-blue), var(--color-sand)); }
+.venueVisual img { object-fit: cover; object-position: center 42%; filter: saturate(0.86) contrast(0.98); transform: scale(1.02); }
 .venueVisual::after { position: absolute; inset: auto 0 0; height: 28%; background: linear-gradient(transparent, rgb(247 242 231 / 94%)); content: ""; }
 .venueNumber { position: absolute; top: 1rem; left: 1rem; z-index: 2; display: grid; width: 2.65rem; height: 2.65rem; place-items: center; border: 1px solid rgb(180 154 97 / 52%); border-radius: 50%; background: rgb(253 251 246 / 82%); color: var(--color-olive-dark); font-family: var(--font-display); }
 .receptionVisual { display: grid; place-items: center; background: linear-gradient(160deg, #d9e5e2, #ebe0cb 72%); }
 .venueArch { width: 48%; height: 68%; border: 1px solid rgb(75 82 54 / 28%); border-bottom: 0; border-radius: 50% 50% 0 0; box-shadow: 0 0 0 1.5rem rgb(253 251 246 / 26%), 0 0 0 1.6rem rgb(180 154 97 / 16%); }
 .placeholderTag { position: absolute; bottom: 2rem; z-index: 2; width: 100%; padding: 0 1rem; color: var(--color-olive-dark); font-family: var(--font-functional); font-size: 0.68rem; letter-spacing: 0.1em; text-align: center; text-transform: uppercase; }
 .venueDetails { padding: clamp(1.7rem, 4vw, 3.2rem); }
+.venueDetailsHeader { display: flex; align-items: center; gap: 0.75rem; }
+.venueIcon { color: var(--color-gold); }
+.directionsBackdrop { position: fixed; inset: 0; z-index: calc(var(--z-opening) - 10); display: grid; place-items: center; padding: var(--gutter); background: rgb(33 36 24 / 38%); }
+.directionsSheet { position: relative; width: min(100%, 32rem); padding: clamp(2rem, 5vw, 3.4rem); border: 1px solid rgb(180 154 97 / 45%); background: var(--color-warm-white); box-shadow: var(--shadow-float); }
+.directionsClose { position: absolute; top: 1rem; right: 1rem; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid rgb(116 123 85 / 24%); border-radius: 50%; background: transparent; cursor: pointer; }
+.directionsSheet h2 { max-width: 12ch; margin: 0.55rem 0 1rem; color: var(--color-olive-dark); font-size: clamp(2rem, 5vw, 3rem); font-weight: 400; line-height: 1; }
+.directionsAddress { color: var(--color-warm-gray); font-size: 0.92rem; line-height: 1.55; }
+.directionsActions { display: grid; gap: 0.65rem; margin-top: 1.7rem; }
 .venueEyebrow { color: var(--color-olive); font-family: var(--font-functional); font-size: var(--text-label); font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; }
-.venueDetails h3 { max-width: 13ch; margin: 0.55rem 0 1.7rem; color: var(--color-olive-dark); font-size: clamp(2rem, 3.5vw, 3.4rem); font-weight: 400; line-height: 1; }
+.venueDetails h3 { max-width: 16ch; margin: 0.55rem 0 1.7rem; color: var(--color-olive-dark); font-size: clamp(2rem, 3.5vw, 3.4rem); font-weight: 400; line-height: 1; }
 .venueDetails dl { display: grid; gap: 0.9rem; margin-bottom: 1.7rem; }
 .venueDetails dl div { display: grid; grid-template-columns: 5rem 1fr; gap: 0.75rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgb(116 123 85 / 14%); }
 .venueDetails dt { color: var(--color-olive); font-family: var(--font-functional); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -630,13 +658,14 @@
   .heroPhoto img {
     object-position: 51% 32%;
     filter: saturate(0.9) contrast(0.97) brightness(0.87);
-    transform: scale(1.006);
+    transform: scale(1.045);
   }
   .heroVeil {
     background:
       linear-gradient(180deg, rgb(33 36 24 / 8%) 0%, rgb(33 36 24 / 4%) 32%, rgb(33 36 24 / 58%) 100%),
       linear-gradient(90deg, rgb(253 251 246 / 8%), rgb(253 251 246 / 0%) 42%);
   }
+  .heroVeil::before { display: none; }
   .heroInner { min-height: 76svh; grid-template-columns: 1fr; gap: 0; }
   .heroCopy {
     display: grid;
@@ -658,7 +687,7 @@
   }
   .heroRule { justify-content: start; width: 12rem; margin-bottom: 0.55rem; }
   .heroRule::before, .heroRule::after { background: rgb(253 251 246 / 76%); }
-  .scrollCue { display: none; }
+  .scrollCue { bottom: max(0.8rem, env(safe-area-inset-bottom)); }
   .storyLine { left: 1rem; }
   .storyChapter, .storyChapter.end { padding-left: 2.5rem; grid-template-columns: 1fr; gap: 1.5rem; }
   .storyChapter.end .storyImage, .storyChapter.end .storyCopy { order: initial; text-align: left; }
@@ -666,10 +695,17 @@
   .photoFrame img,
   .galleryPhoto img { object-position: var(--photo-position-mobile, center); }
   .venueGrid { grid-template-columns: 1fr; }
-  .venueVisual { min-height: min(118vw, 36rem); }
+  .venueVisual { min-height: min(86vw, 30rem); aspect-ratio: 1.16 / 1; }
+  .directionsBackdrop { align-items: end; padding: 0; }
+  .directionsSheet { width: 100%; padding: 2rem var(--gutter) max(2rem, env(safe-area-inset-bottom)); }
   .dressSection :global(.section-inner), .giftsInner { grid-template-columns: 1fr; }
   .dressIntro, .giftsCopy { max-width: none; }
   .travelGrid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroPhoto img, .scrollCue { animation: none; }
+  .heroPhoto img { transform: scale(1.045); }
 }
 
 @media (max-width: 40rem) {

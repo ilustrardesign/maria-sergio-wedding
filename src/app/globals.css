@@ -70,7 +70,7 @@
 
 @layer reset {
   *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; text-size-adjust: 100%; }
+  html { scroll-behavior: smooth; scroll-padding-top: 4.75rem; scroll-snap-type: y proximity; text-size-adjust: 100%; }
   body, h1, h2, h3, p, figure, blockquote, dl, dd { margin: 0; }
   ul, ol { margin: 0; padding: 0; }
   img, picture, svg { display: block; max-width: 100%; }
@@ -108,7 +108,9 @@
   .section {
     position: relative;
     padding: var(--section-space) var(--gutter);
+    scroll-margin-top: 4.75rem;
   }
+  #inicio, #traje { scroll-snap-align: start; }
   .section-inner { width: min(100%, var(--max-width)); margin-inline: auto; }
   .reading-width { max-width: var(--max-reading); }
   .skip-link {
@@ -165,6 +167,7 @@
 
 @media (max-width: 40rem) {
   :root { --section-space: clamp(5.5rem, 18vw, 7.5rem); }
+  html { scroll-padding-top: 4.25rem; }
   .button { min-height: 3.25rem; }
 }
 

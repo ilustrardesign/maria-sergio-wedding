@@ -356,3 +356,13 @@ export async function searchGuests(endpoint: string, query: string, options?: Se
     .filter((item): item is GuestSelection => Boolean(item) && typeof (item as GuestSelection).guestId === "string" && typeof (item as GuestSelection).displayName === "string")
     .slice(0, GUEST_SEARCH_MAX_RESULTS);
 }
+
+export async function warmGuestSearch(endpoint: string, signal?: AbortSignal): Promise<void> {
+  const response = await fetch(endpoint, {
+    body: JSON.stringify({ query: "__maria_sergio_warmup__" }),
+    headers: { "Content-Type": "application/json" },
+    signal,
+    method: "POST",
+  });
+  if (!response.ok) throw new Error("Guest search warm-up failed");
+}

@@ -187,7 +187,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       try {
         setSearchState("loading");
         setSearchTone("loading");
-        setSearchFeedback(rsvp.labels.guestSearchLoading);
+        setSearchFeedback("Buscando seu nome…");
         const results = await searchGuests("/api/guests/search", normalized, { signal: controller.signal });
         if (controller.signal.aborted || requestId !== searchRequestIdRef.current) return;
 
@@ -414,7 +414,8 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                   id={guestSearchId}
                   maxLength={120}
                   aria-haspopup="listbox"
-                  placeholder="Digite seu nome ou sobrenome"
+                  aria-busy={searchState === "loading"}
+                  placeholder="Digite seu nome"
                   role="combobox"
                   onBlur={() => {
                     window.setTimeout(() => {
@@ -460,6 +461,8 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                   value={query}
                 />
               </div>
+
+              <p className={styles.searchHelp}>{rsvp.labels.guestSearchHelp}</p>
 
               <p aria-live="polite" className={searchMessageClassName} id="rsvp-guest-search-status" role="status">
                 {visibleSearchMessage}

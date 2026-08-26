@@ -48,7 +48,8 @@ describe("RsvpSection", () => {
     const search = screen.getByRole("combobox", { name: /Quem está confirmando presença/ });
     expect(screen.queryByText("Digite o nome e selecione-o na lista.")).not.toBeInTheDocument();
     expect(screen.queryByText("Selecione um nome da lista para adicioná-lo.")).not.toBeInTheDocument();
-    expect(search).toHaveAttribute("placeholder", "Digite seu nome ou sobrenome");
+    expect(search).toHaveAttribute("placeholder", "Digite seu nome");
+    expect(screen.getByText("Digite seu nome e aguarde alguns instantes enquanto localizamos seu convite.")).toBeInTheDocument();
 
     await user.type(search, "p");
     expect(screen.queryByText("Buscando...")).not.toBeInTheDocument();

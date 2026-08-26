@@ -279,12 +279,14 @@
 @media (max-width: 71.999rem) {
   .desktopNav { display: none; }
   .menuButton { display: inline-flex; }
+  .bar { justify-content: flex-end; padding-right: max(1rem, env(safe-area-inset-right)); }
 }
 
 @media (max-width: 40rem) {
   .bar { min-height: 4.4rem; }
   .navigationVisible .bar { min-height: 4.15rem; }
   .menuButton { min-width: 3rem; width: 3rem; padding-inline: 0; }
+  .bar { padding-right: max(1rem, env(safe-area-inset-right)); }
   .menuButton span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
   .mobilePanel { padding-top: 6.35rem; }
   .mobilePanel a { font-size: clamp(1.55rem, 7.2vw, 2.25rem); }

@@ -93,11 +93,20 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
     const loopRestartingRef = useRef(false);
     const previewDetectedRef = useRef(false);
     const pendingGesturePlayRef = useRef(false);
+    const playbackIntentRef = useRef(false);
+    const loopTimeoutRef = useRef<number | null>(null);
+    const isPlayingRef = useRef(false);
+    const lastPlayingRef = useRef(false);
+    const hoverOpenTimeoutRef = useRef<number | null>(null);
+    const hoverCloseTimeoutRef = useRef<number | null>(null);
     const [open, setOpen] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const available = enabled && Boolean(spotifyUri || spotifyUrl);
 
     const requestPlay = useCallback(() => {
+      playbackIntentRef.current = true;
+      isPlayingRef.current = true;
+      setIsPlaying(true);
       const controller = controllerRef.current;
       if (!controller) {
         pendingGesturePlayRef.current = true;
@@ -112,9 +121,16 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
     }, []);
 
     const callController = useCallback((method: "pause" | "restart" | "resume" | "togglePlay") => {
+      if (method === "pause") playbackIntentRef.current = false;
+      if (method === "resume") playbackIntentRef.current = true;
+      if (method === "togglePlay") playbackIntentRef.current = !playbackIntentRef.current;
+      if (method === "pause") { isPlayingRef.current = false; setIsPlaying(false); }
+      if (method === "resume" || method === "restart") { isPlayingRef.current = true; setIsPlaying(true); }
+      if (method === "togglePlay") { isPlayingRef.current = playbackIntentRef.current; setIsPlaying(playbackIntentRef.current); }
       try {
         controllerRef.current?.[method]();
       } catch {
+        isPlayingRef.current = false;
         setIsPlaying(false);
       }
     }, []);
@@ -155,23 +171,30 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
               const isPaused = Boolean(event.data?.isPaused);
               const position = event.data?.position ?? 0;
               const playing = !isPaused && !isBuffering;
+              if (isPaused && lastPlayingRef.current && !loopRestartingRef.current) playbackIntentRef.current = false;
+              lastPlayingRef.current = playing;
+              isPlayingRef.current = playing;
               setIsPlaying(playing);
 
               if (duration <= 0) return;
               if (duration < 60000) {
                 previewDetectedRef.current = true;
-                loopRestartingRef.current = false;
-                return;
+              } else {
+                previewDetectedRef.current = false;
               }
 
-              previewDetectedRef.current = false;
               const remaining = duration - position;
-              const nearEnd = playing && position > duration * 0.92 && remaining <= 1500;
-              if (nearEnd && !loopRestartingRef.current && !previewDetectedRef.current) {
+              const nearEnd = playing && position > duration * 0.92 && remaining <= (previewDetectedRef.current ? 700 : 350);
+              if (nearEnd && playbackIntentRef.current && !loopRestartingRef.current) {
                 loopRestartingRef.current = true;
                 try {
                   controller.restart();
-                  window.setTimeout(() => {
+                  loopTimeoutRef.current = window.setTimeout(() => {
+                    loopTimeoutRef.current = null;
+                    if (!playbackIntentRef.current) {
+                      loopRestartingRef.current = false;
+                      return;
+                    }
                     try {
                       controller.resume();
                     } catch {
@@ -195,6 +218,11 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
         destroyed = true;
         controllerRef.current?.destroy?.();
         controllerRef.current = null;
+        if (loopTimeoutRef.current) window.clearTimeout(loopTimeoutRef.current);
+        loopTimeoutRef.current = null;
+        playbackIntentRef.current = false;
+        isPlayingRef.current = false;
+        lastPlayingRef.current = false;
       };
     }, [available, requestPlay, spotifyUri, spotifyUrl]);
 
@@ -211,24 +239,46 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
       };
     }, [open]);
 
+    useEffect(() => () => {
+      if (hoverOpenTimeoutRef.current) window.clearTimeout(hoverOpenTimeoutRef.current);
+      if (hoverCloseTimeoutRef.current) window.clearTimeout(hoverCloseTimeoutRef.current);
+    }, []);
+
     if (!available) return null;
 
-    const stateLabel = open ? "Fechar player de música" : "Abrir player de música";
+    const stateLabel = isPlaying ? "Pausar música" : "Reproduzir música";
     const panelClassName = [styles.spotifyPanel, open ? styles.spotifyPanelOpen : ""].filter(Boolean).join(" ");
+    const revealPlayer = () => {
+      if (!window.matchMedia("(min-width: 49rem)").matches) return;
+      if (hoverCloseTimeoutRef.current) window.clearTimeout(hoverCloseTimeoutRef.current);
+      if (hoverOpenTimeoutRef.current) window.clearTimeout(hoverOpenTimeoutRef.current);
+      hoverOpenTimeoutRef.current = window.setTimeout(() => setOpen(true), 190);
+    };
+    const concealPlayer = () => {
+      if (hoverOpenTimeoutRef.current) window.clearTimeout(hoverOpenTimeoutRef.current);
+      if (hoverCloseTimeoutRef.current) window.clearTimeout(hoverCloseTimeoutRef.current);
+      hoverCloseTimeoutRef.current = window.setTimeout(() => setOpen(false), 180);
+    };
+    const togglePlayback = () => {
+      if (isPlayingRef.current) callController("pause");
+      else if (controllerRef.current) callController("resume");
+      else requestPlay();
+    };
 
     return (
-      <div className={styles.audioControl}>
+      <div className={styles.audioControl} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) concealPlayer(); }} onFocus={revealPlayer} onMouseEnter={revealPlayer} onMouseLeave={concealPlayer}>
         <button
-          aria-expanded={open}
+          aria-pressed={isPlaying}
           aria-label={stateLabel}
           className={styles.audioButton}
-          onClick={() => setOpen((current) => !current)}
+          onClick={togglePlayback}
           title={stateLabel}
           type="button"
         >
           <Icon name={isPlaying ? "pause" : "music"} size={19} />
         </button>
-        <div aria-hidden={!open} aria-label={title} className={panelClassName} role="dialog">
+        <button aria-label="Abrir player completo" className={styles.playerButton} onClick={() => setOpen(true)} type="button"><span aria-hidden="true">⌄</span></button>
+        <div aria-hidden={!open} aria-label={title} className={panelClassName} onMouseEnter={revealPlayer} onMouseLeave={concealPlayer} role="dialog">
           <div className={styles.spotifyHeader}>
             <p>{title}</p>
             <button aria-label="Fechar player de música" onClick={() => setOpen(false)} ref={closeButtonRef} tabIndex={open ? 0 : -1} type="button">

@@ -41,20 +41,20 @@ describe("AudioController Spotify iFrame API", () => {
     expect(controller.play).toHaveBeenCalledTimes(1);
     ref.current?.pause();
     ref.current?.resume();
-    ref.current?.togglePlay();
     expect(controller.pause).toHaveBeenCalledTimes(1);
     expect(controller.resume).toHaveBeenCalledTimes(1);
-    expect(controller.togglePlay).toHaveBeenCalledTimes(1);
 
     vi.useFakeTimers();
-    playbackListener?.({ data: { duration: 180000, isBuffering: false, isPaused: false, position: 179200 } });
+    playbackListener?.({ data: { duration: 180000, isBuffering: false, isPaused: false, position: 179800 } });
 
     expect(controller.restart).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(220);
     expect(controller.resume).toHaveBeenCalledTimes(2);
+    ref.current?.togglePlay();
+    expect(controller.togglePlay).toHaveBeenCalledTimes(1);
   });
 
-  it("não entra em loop com preview curto e preserva play/pause", async () => {
+  it("mantém preview curto em loop e preserva pausa/resume manual", async () => {
     const ref = createRef<AudioControllerHandle>();
     let playbackListener: PlaybackListener | undefined;
     const controller = {
@@ -78,14 +78,16 @@ describe("AudioController Spotify iFrame API", () => {
 
     vi.useFakeTimers();
     playbackListener?.({ data: { duration: 45000, isBuffering: false, isPaused: false, position: 44880 } });
-    vi.advanceTimersByTime(500);
-    expect(controller.restart).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(controller.restart).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(220);
+    expect(controller.resume).toHaveBeenCalledTimes(1);
 
     ref.current?.pause();
     ref.current?.resume();
     ref.current?.togglePlay();
     expect(controller.pause).toHaveBeenCalledTimes(1);
-    expect(controller.resume).toHaveBeenCalledTimes(1);
+    expect(controller.resume).toHaveBeenCalledTimes(2);
     expect(controller.togglePlay).toHaveBeenCalledTimes(1);
   });
 });

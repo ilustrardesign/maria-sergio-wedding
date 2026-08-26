@@ -29,7 +29,7 @@ export function HeroSection({ content }: HeroSectionProps) {
 
   return (
     <section aria-labelledby="hero-title" className={styles.hero} id="inicio">
-      <div className={styles.heroPhoto}>
+      <div className={styles.heroPhoto} data-parallax="0.8">
         <picture>
           <source
             media="(orientation: landscape), (min-aspect-ratio: 1/1)"
@@ -42,14 +42,14 @@ export function HeroSection({ content }: HeroSectionProps) {
       <span aria-hidden="true" className={styles.heroVeil} />
       <div className={styles.heroInner}>
         <div className={styles.heroCopy} data-reveal>
-          <p className={styles.heroEyebrow}>{content.hero.eyebrow}</p>
-          <h1 id="hero-title">{content.hero.title}</h1>
-          <div className={styles.heroRule} aria-hidden="true"><span /></div>
-          <p className={styles.heroLocation}>{content.hero.location}</p>
+          <p className={[styles.heroEyebrow, styles.heroStagger].join(" ")}>{content.hero.eyebrow}</p>
+          <h1 id="hero-title"><span className={styles.heroStagger}>Maria</span><span className={styles.heroStagger}>&amp; Sérgio</span></h1>
+          <div className={[styles.heroRule, styles.heroStagger].join(" ")} aria-hidden="true"><span /></div>
+          <p className={[styles.heroLocation, styles.heroStagger].join(" ")}>{content.hero.location}</p>
         </div>
       </div>
       <a aria-label="Ir para a contagem regressiva" className={styles.scrollCue} href="#data">
-        <span>Descobrir</span><i aria-hidden="true" />
+        <i aria-hidden="true" />
       </a>
     </section>
   );

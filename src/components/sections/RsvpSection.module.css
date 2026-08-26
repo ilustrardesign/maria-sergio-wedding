@@ -292,6 +292,13 @@
   box-shadow: none;
 }
 
+.searchHelp {
+  margin: 0.55rem 0 0;
+  color: var(--color-warm-gray);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .field input:disabled,
 .readOnlyCard input {
   border-color: rgb(109 106 97 / 18%);

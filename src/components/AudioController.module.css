@@ -3,6 +3,9 @@
   top: max(0.9rem, env(safe-area-inset-top));
   right: max(1.15rem, env(safe-area-inset-right));
   z-index: var(--z-controls);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .audioButton {
@@ -30,11 +33,13 @@
   position: absolute;
   top: calc(100% + 0.7rem);
   right: 0;
-  width: min(22rem, calc(100vw - 2rem));
+  width: min(25rem, calc(100vw - 2rem));
   overflow: hidden;
-  border: 1px solid rgb(116 123 85 / 28%);
-  background: var(--color-warm-white);
-  box-shadow: var(--shadow-float);
+  border: 1px solid rgb(180 154 97 / 34%);
+  border-radius: 0.35rem;
+  padding: 0.45rem;
+  background: rgb(253 251 246 / 96%);
+  box-shadow: 0 14px 40px rgb(65 61 45 / 12%);
   opacity: 0;
   pointer-events: none;
   transform: translateY(-0.35rem);
@@ -55,7 +60,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.55rem 0.72rem 0.55rem 0.9rem;
+  padding: 0.55rem 0.45rem 0.6rem 0.55rem;
   border-bottom: 1px solid rgb(116 123 85 / 16%);
   color: var(--color-olive-dark);
   font-family: var(--font-functional);
@@ -82,17 +87,41 @@
   width: 100%;
   height: 152px;
   border: 0;
+  border-radius: 0.15rem;
+}
+
+.playerButton {
+  display: none;
+  width: 1.45rem;
+  height: 1.45rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(116 123 85 / 28%);
+  border-radius: 50%;
+  background: rgb(253 251 246 / 78%);
+  color: var(--color-olive-dark);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 @media (max-width: 48rem) {
   .audioControl {
-    top: max(0.72rem, env(safe-area-inset-top));
-    right: max(1rem, env(safe-area-inset-right));
+    top: max(0.82rem, env(safe-area-inset-top));
+    right: calc(1rem + 2.85rem + 0.65rem + env(safe-area-inset-right));
   }
 
   .audioButton {
     width: 2.85rem;
     height: 2.85rem;
+  }
+
+  .playerButton { display: flex; }
+
+  .spotifyPanel {
+    top: calc(100% + 0.6rem);
+    right: max(-0.15rem, calc((100vw - 22rem) * -0.5));
+    width: min(22rem, calc(100vw - 2rem));
   }
 }
 
