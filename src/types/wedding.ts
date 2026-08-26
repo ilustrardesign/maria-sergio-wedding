@@ -115,6 +115,7 @@ export interface RsvpMessages {
   guestsRequired: string;
   guestSearchFailed: string;
   guestSearchDuplicate: string;
+  guestSearchSelectFromList: string;
   demo: string;
   success: string;
   endpointMissing: string;

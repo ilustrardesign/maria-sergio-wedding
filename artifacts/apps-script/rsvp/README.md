@@ -21,3 +21,4 @@ Submission tab:
 - `needs_review=true` entries are excluded from search.
 - The browser never receives the full registry.
 - Canonical names stay in the Sheet and are never trusted from the client.
+- Search reads the registry through `CacheService` for up to 300 seconds and invalidates after registry normalization.

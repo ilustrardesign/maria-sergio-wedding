@@ -86,6 +86,10 @@ export function normalizeGuestSearchTerm(value: string) {
     .replace(/\s+/g, " ");
 }
 
+function searchTokens(value: string) {
+  return normalizeGuestSearchTerm(value).split(" ").filter((token) => token.length > 0);
+}
+
 export function normalizeGuestRows(rows: GuestRegistryRow[]): NormalizedGuestRegistryRow[] {
   return rows.map((row) => {
     const rawName = cleanText(row.raw_name, 180);
@@ -167,19 +171,62 @@ function boundedDistanceWithin(source: string, target: string, maxDistance: numb
   return previous[target.length];
 }
 
-function fuzzyRank(searchable: string, words: string[], query: string) {
+function isSingleAdjacentTransposition(source: string, target: string) {
+  if (source.length !== target.length) return false;
+
+  let firstMismatch = -1;
+  let secondMismatch = -1;
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === target[index]) continue;
+    if (firstMismatch === -1) {
+      firstMismatch = index;
+      continue;
+    }
+    if (secondMismatch === -1) {
+      secondMismatch = index;
+      continue;
+    }
+    return false;
+  }
+
+  return (
+    firstMismatch >= 0 &&
+    secondMismatch === firstMismatch + 1 &&
+    source[firstMismatch] === target[secondMismatch] &&
+    source[secondMismatch] === target[firstMismatch]
+  );
+}
+
+function fuzzyRank(words: string[], query: string) {
   if (query.length < 4) return null;
 
-  const maxDistance = query.length <= 5 ? 2 : 2;
-  const candidates = [searchable, ...words].filter((candidate) => candidate.length >= Math.max(3, query.length - maxDistance));
-  const bestDistance = candidates.reduce((best, candidate) => {
-    if (candidate.length > query.length + maxDistance) {
-      const windows = Array.from({ length: candidate.length - query.length + 1 }, (_, index) => candidate.slice(index, index + query.length));
-      return Math.min(best, ...windows.map((window) => boundedDistanceWithin(query, window, maxDistance)));
+  const maxDistance = query.length <= 5 ? 1 : 2;
+  const normalizedQuery = query;
+  const minimumPrefixLength = query.length <= 5 ? 2 : 3;
+  const plausibleTokens = words.filter((token) => token.length >= 4 && Math.abs(token.length - normalizedQuery.length) <= maxDistance + 1);
+  let bestDistance = maxDistance + 1;
+
+  for (const token of plausibleTokens) {
+    if (!token.startsWith(normalizedQuery.slice(0, minimumPrefixLength))) continue;
+
+    if (token.length > normalizedQuery.length + maxDistance) {
+      for (let index = 0; index <= token.length - normalizedQuery.length; index += 1) {
+        const window = token.slice(index, index + normalizedQuery.length);
+        bestDistance = Math.min(bestDistance, boundedDistanceWithin(normalizedQuery, window, maxDistance));
+        if (bestDistance > maxDistance && isSingleAdjacentTransposition(normalizedQuery, window)) {
+          bestDistance = 1;
+        }
+        if (bestDistance <= maxDistance) break;
+      }
+    } else {
+      bestDistance = Math.min(bestDistance, boundedDistanceWithin(normalizedQuery, token, maxDistance));
+      if (bestDistance > maxDistance && isSingleAdjacentTransposition(normalizedQuery, token)) {
+        bestDistance = 1;
+      }
     }
 
-    return Math.min(best, boundedDistanceWithin(query, candidate, maxDistance));
-  }, maxDistance + 1);
+    if (bestDistance <= maxDistance) break;
+  }
 
   return bestDistance <= maxDistance ? 50 + bestDistance : null;
 }
@@ -187,14 +234,14 @@ function fuzzyRank(searchable: string, words: string[], query: string) {
 function searchRank(row: NormalizedGuestRegistryRow, query: string) {
   const searchable = normalizeGuestSearchTerm(`${row.display_name} ${row.raw_name}`);
   const displayName = normalizeGuestSearchTerm(row.display_name);
-  const words = searchable.split(" ").filter(Boolean);
+  const words = searchTokens(`${row.display_name} ${row.raw_name}`);
 
   if (displayName === query || searchable === query) return 0;
   if (displayName.startsWith(query) || searchable.startsWith(query)) return 10;
   if (words.some((word) => word.startsWith(query))) return 20;
   if (searchable.includes(query)) return 30;
 
-  return fuzzyRank(searchable, words, query);
+  return fuzzyRank(words, query);
 }
 
 export function searchGuestRows(rows: GuestRegistryRow[], query: string, limit = GUEST_SEARCH_MAX_RESULTS): GuestSearchResult[] {
@@ -287,10 +334,15 @@ export async function searchGuestRegistry(query: string): Promise<GuestSearchReg
   };
 }
 
-export async function searchGuests(endpoint: string, query: string): Promise<GuestSearchResponse> {
+type SearchGuestsOptions = {
+  signal?: AbortSignal;
+};
+
+export async function searchGuests(endpoint: string, query: string, options?: SearchGuestsOptions): Promise<GuestSearchResponse> {
   const response = await fetch(endpoint, {
     body: JSON.stringify({ query }),
     headers: { "Content-Type": "application/json" },
+    signal: options?.signal,
     method: "POST",
   });
 

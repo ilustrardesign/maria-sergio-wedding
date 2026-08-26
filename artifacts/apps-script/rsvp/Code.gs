@@ -29,6 +29,7 @@ const GUEST_SHEET_NAME = "Convidados";
 const RESPONSE_SHEET_NAME = "RSVP";
 const MAX_SEARCH_RESULTS = 8;
 const MIN_SEARCH_CHARS = 2;
+const GUEST_REGISTRY_CACHE_TTL_SECONDS = 300;
 
 function setup() {
   return setupGuestsSheet();
@@ -44,6 +45,7 @@ function setupGuestsSheet() {
 
   guestsSheet.setFrozenRows(1);
   responsesSheet.setFrozenRows(1);
+  invalidateGuestRegistryCache_();
 
   return {
     ok: true,
@@ -85,6 +87,8 @@ function normalizeGuestRegistry() {
     sheet.getRange(2, 1, normalizedRows.length, GUEST_HEADERS.length).setValues(normalizedRows);
   }
 
+  invalidateGuestRegistryCache_();
+
   return { ok: true, normalized: normalizedRows.length };
 }
 
@@ -114,11 +118,7 @@ function handleSearch_(body) {
     return json_({ ok: true, guests: [] });
   }
 
-  const spreadsheet = getSpreadsheet_();
-  const sheet = getOrCreateSheet_(spreadsheet, GUEST_SHEET_NAME);
-  ensureHeaders_(sheet, GUEST_HEADERS);
-
-  const rows = readSheetRows_(sheet, GUEST_HEADERS);
+  const rows = getGuestRegistryRowsCached_();
   const results = searchGuests_(rows, query);
   return json_({ ok: true, guests: results });
 }
@@ -209,18 +209,28 @@ function searchGuestRank_(searchable, words, query) {
 
   if (query.length < 4) return null;
 
-  const maxDistance = query.length <= 5 ? 2 : 2;
-  const candidates = [searchable].concat(words);
+  const maxDistance = query.length <= 5 ? 1 : 2;
+  const minimumPrefixLength = query.length <= 5 ? 2 : 3;
+  const plausibleTokens = words.filter((token) => token.length >= 4 && Math.abs(token.length - query.length) <= maxDistance + 1);
   let best = maxDistance + 1;
-  for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex += 1) {
-    const candidate = candidates[candidateIndex];
-    if (!candidate || candidate.length < Math.max(3, query.length - maxDistance)) continue;
+  for (let candidateIndex = 0; candidateIndex < plausibleTokens.length; candidateIndex += 1) {
+    const candidate = plausibleTokens[candidateIndex];
+    if (!candidate) continue;
+    if (candidate.slice(0, minimumPrefixLength) !== query.slice(0, minimumPrefixLength)) continue;
     if (candidate.length > query.length + maxDistance) {
       for (let offset = 0; offset <= candidate.length - query.length; offset += 1) {
-        best = Math.min(best, boundedDistance_(query, candidate.slice(offset, offset + query.length), maxDistance));
+        var window = candidate.slice(offset, offset + query.length);
+        best = Math.min(best, boundedDistance_(query, window, maxDistance));
+        if (best > maxDistance && isSingleAdjacentTransposition_(query, window)) {
+          best = 1;
+        }
+        if (best <= maxDistance) break;
       }
     } else {
       best = Math.min(best, boundedDistance_(query, candidate, maxDistance));
+      if (best > maxDistance && isSingleAdjacentTransposition_(query, candidate)) {
+        best = 1;
+      }
     }
     if (best <= maxDistance) break;
   }
@@ -256,6 +266,32 @@ function boundedDistance_(source, target, maxDistance) {
   }
 
   return previous[target.length];
+}
+
+function isSingleAdjacentTransposition_(source, target) {
+  if (source.length !== target.length) return false;
+
+  var firstMismatch = -1;
+  var secondMismatch = -1;
+  for (var index = 0; index < source.length; index += 1) {
+    if (source.charAt(index) === target.charAt(index)) continue;
+    if (firstMismatch === -1) {
+      firstMismatch = index;
+      continue;
+    }
+    if (secondMismatch === -1) {
+      secondMismatch = index;
+      continue;
+    }
+    return false;
+  }
+
+  return (
+    firstMismatch >= 0 &&
+    secondMismatch === firstMismatch + 1 &&
+    source.charAt(firstMismatch) === target.charAt(secondMismatch) &&
+    source.charAt(secondMismatch) === target.charAt(firstMismatch)
+  );
 }
 
 function validateGuests_(rows, guests) {
@@ -326,6 +362,33 @@ function getOrCreateSheet_(spreadsheet, name) {
   const existing = spreadsheet.getSheetByName(name);
   if (existing) return existing;
   return spreadsheet.insertSheet(name);
+}
+
+function getGuestRegistryRowsCached_() {
+  const spreadsheet = getSpreadsheet_();
+  const sheet = getOrCreateSheet_(spreadsheet, GUEST_SHEET_NAME);
+  ensureHeaders_(sheet, GUEST_HEADERS);
+
+  const cache = CacheService.getScriptCache();
+  const cacheKey = `guest-registry:${spreadsheet.getId()}`;
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (error) {
+      // Ignore malformed cache payloads and rebuild from the sheet.
+    }
+  }
+
+  const rows = readSheetRows_(sheet, GUEST_HEADERS);
+  cache.put(cacheKey, JSON.stringify(rows), GUEST_REGISTRY_CACHE_TTL_SECONDS);
+  return rows;
+}
+
+function invalidateGuestRegistryCache_() {
+  const spreadsheet = getSpreadsheet_();
+  CacheService.getScriptCache().remove(`guest-registry:${spreadsheet.getId()}`);
 }
 
 function parseBody_(e) {

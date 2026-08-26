@@ -63,32 +63,45 @@ export async function sendRsvpEmails(input: RsvpEmailInput): Promise<RsvpEmailRe
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const admins = splitEmails(process.env.RESEND_ADMIN_EMAILS);
-  if (!apiKey) return { attempted: false, admin: "skipped", guest: "skipped", sent: false };
+  if (!apiKey) {
+    console.warn("Resend enabled but API key is missing; skipping notification emails.");
+    return { attempted: false, admin: "skipped", guest: "skipped", sent: false };
+  }
 
   const adminEmail = renderRsvpAdminEmail(input);
   const guestEmail = input.email ? renderRsvpGuestEmail({ selectedGuests: input.selectedGuests }) : null;
-  const replyTo = input.email ? [input.email] : [defaultReplyTo()];
 
   let admin: RsvpEmailStatus = "skipped";
   let guest: RsvpEmailStatus = "skipped";
-
+  let adminSent = false;
+  let guestSent = false;
+  const tasks: Array<Promise<void>> = [];
   if (admins.length > 0) {
-    try {
-      await sendEmail({ ...adminEmail, reply_to: replyTo, to: admins }, apiKey);
-      admin = "sent";
-    } catch {
-      admin = "failed";
-    }
+    tasks.push(
+      sendEmail({ ...adminEmail, reply_to: input.email ? [input.email] : [defaultReplyTo()], to: admins }, apiKey)
+        .then(() => {
+          admin = "sent";
+          adminSent = true;
+        })
+        .catch(() => { admin = "failed"; }),
+    );
   }
 
   if (guestEmail && input.email) {
-    try {
-      await sendEmail({ ...guestEmail, reply_to: [defaultReplyTo()], to: [input.email] }, apiKey);
-      guest = "sent";
-    } catch {
-      guest = "failed";
-    }
+    tasks.push(
+      sendEmail({ ...guestEmail, reply_to: [defaultReplyTo()], to: [input.email] }, apiKey)
+        .then(() => {
+          guest = "sent";
+          guestSent = true;
+        })
+        .catch(() => { guest = "failed"; }),
+    );
   }
 
-  return { attempted: true, admin, guest, sent: admin === "sent" || guest === "sent" };
+  if (tasks.length === 0) {
+    return { attempted: false, admin, guest, sent: false };
+  }
+
+  await Promise.allSettled(tasks);
+  return { attempted: true, admin, guest, sent: adminSent || guestSent };
 }

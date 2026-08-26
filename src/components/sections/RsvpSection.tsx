@@ -25,6 +25,21 @@ type SearchTone = "neutral" | "loading" | "warning" | "error" | "success";
 const fieldErrorId = (field: FieldName) => `rsvp-${field}-error`;
 const guestSearchId = "rsvp-guest-search";
 const guestListboxId = "rsvp-guest-listbox";
+const SEARCH_DEBOUNCE_MS = 275;
+
+function getRsvpSuccessMessage(selectedGuests: Array<{ attendance: GuestAttendance }>) {
+  const allYes = selectedGuests.length > 0 && selectedGuests.every((guest) => guest.attendance === "yes");
+  const allNo = selectedGuests.length > 0 && selectedGuests.every((guest) => guest.attendance === "no");
+  if (allYes) {
+    return selectedGuests.length === 1
+      ? "Presença confirmada. Que alegria ter você conosco!"
+      : "Presenças confirmadas. Que alegria ter vocês conosco!";
+  }
+  if (allNo) {
+    return "Resposta recebida. Obrigado por nos avisar.";
+  }
+  return "Respostas registradas com sucesso. Obrigado por nos avisar.";
+}
 
 function FieldError({ field, message }: { field: FieldName; message?: string }) {
   if (!message) return null;
@@ -68,28 +83,25 @@ export function RsvpSection({ content }: RsvpSectionProps) {
   const [options, setOptions] = useState<GuestSelection[]>([]);
   const [searchState, setSearchState] = useState<SearchState>("idle");
   const [searchTone, setSearchTone] = useState<SearchTone>("neutral");
-  const [searchFeedback, setSearchFeedback] = useState(rsvp.labels.guestSearchHelp);
+  const [searchFeedback, setSearchFeedback] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [attendanceErrors, setAttendanceErrors] = useState<AttendanceErrors>({});
   const [submissionState, setSubmissionState] = useState<SubmissionState>("idle");
   const [statusMessage, setStatusMessage] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
+  const searchRequestIdRef = useRef(0);
   const queryTrimmed = query.trim();
   const isLoading = submissionState === "loading";
 
   const visibleSearchMessage = useMemo(() => {
-    if (searchTone === "warning" && searchFeedback === "Selecione um nome da lista para adicioná-lo.") return searchFeedback;
-    if (searchTone === "success" && searchFeedback !== rsvp.labels.guestSearchHelp) return searchFeedback;
     if (searchState === "loading") return rsvp.labels.guestSearchLoading;
-    if (queryTrimmed.length === 0) return "";
-    if (queryTrimmed.length < 2) return rsvp.labels.guestSearchMinimum;
-    if (searchState === "empty") return `${rsvp.labels.guestSearchEmpty} Confira a escrita ou tente outro sobrenome.`;
+    if (searchState === "empty") return rsvp.labels.guestSearchEmpty;
     if (searchState === "error") return rsvp.messages.guestSearchFailed;
+    if (searchTone === "warning" && searchFeedback) return searchFeedback;
     return searchFeedback;
-  }, [queryTrimmed.length, rsvp.labels.guestSearchEmpty, rsvp.labels.guestSearchHelp, rsvp.labels.guestSearchLoading, rsvp.labels.guestSearchMinimum, rsvp.messages.guestSearchFailed, searchFeedback, searchState, searchTone]);
+  }, [rsvp.labels.guestSearchEmpty, rsvp.labels.guestSearchLoading, rsvp.messages.guestSearchFailed, searchFeedback, searchState, searchTone]);
 
-  const isSearchInvalid = isFocused && queryTrimmed.length >= 2 && (searchState === "empty" || searchState === "error");
+  const isSearchInvalid = Boolean(fieldErrors.guests) || searchTone === "warning" || searchState === "error";
 
   const clearFieldError = useCallback((field: FieldName) => {
     setFieldErrors((current) => {
@@ -129,8 +141,8 @@ export function RsvpSection({ content }: RsvpSectionProps) {
     });
     clearFieldError("guests");
     clearSubmissionMessage();
-    setSearchFeedback("Convidado removido.");
-    setSearchTone("success");
+    setSearchFeedback("");
+    setSearchTone("neutral");
   }, [clearFieldError, clearSubmissionMessage]);
 
   const addGuest = useCallback((guest: GuestSelection) => {
@@ -150,13 +162,12 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       return;
     }
 
-    setSearchFeedback(`${guest.displayName} foi adicionado.`);
-    setSearchTone("success");
-
     setQuery("");
     setOptions([]);
     setSearchState("idle");
     setHighlightedIndex(-1);
+    setSearchTone("neutral");
+    setSearchFeedback("");
     clearFieldError("guests");
     clearSubmissionMessage();
     window.requestAnimationFrame(() => inputRef.current?.focus());
@@ -164,23 +175,21 @@ export function RsvpSection({ content }: RsvpSectionProps) {
 
   useEffect(() => {
     const normalized = queryTrimmed;
-
-    if (normalized.length === 0) {
-      return;
-    }
+    searchRequestIdRef.current += 1;
+    const requestId = searchRequestIdRef.current;
+    const controller = new AbortController();
 
     if (normalized.length < 2) {
-      return;
+      return () => controller.abort();
     }
 
-    let cancelled = false;
     const timeout = window.setTimeout(async () => {
-      setSearchState("loading");
-      setSearchTone("loading");
-      setSearchFeedback(rsvp.labels.guestSearchLoading);
       try {
-        const results = await searchGuests("/api/guests/search", normalized);
-        if (cancelled) return;
+        setSearchState("loading");
+        setSearchTone("loading");
+        setSearchFeedback(rsvp.labels.guestSearchLoading);
+        const results = await searchGuests("/api/guests/search", normalized, { signal: controller.signal });
+        if (controller.signal.aborted || requestId !== searchRequestIdRef.current) return;
 
         const filtered = results.filter((guest) => !selectedGuests.some((selected) => selected.guestId === guest.guestId));
         setOptions(filtered);
@@ -188,29 +197,29 @@ export function RsvpSection({ content }: RsvpSectionProps) {
           setSearchState("empty");
           setSearchTone("warning");
           setHighlightedIndex(-1);
-          setSearchFeedback(`${rsvp.labels.guestSearchEmpty} Confira a escrita ou tente outro sobrenome.`);
+          setSearchFeedback(rsvp.labels.guestSearchEmpty);
           return;
         }
 
         setSearchState("results");
-        setSearchTone("success");
+        setSearchTone("neutral");
         setHighlightedIndex(0);
-        setSearchFeedback(rsvp.labels.guestSearchHelp);
+        setSearchFeedback("");
       } catch {
-        if (cancelled) return;
+        if (controller.signal.aborted || requestId !== searchRequestIdRef.current) return;
         setOptions([]);
         setSearchState("error");
         setSearchTone("error");
         setHighlightedIndex(-1);
         setSearchFeedback(rsvp.messages.guestSearchFailed);
       }
-    }, 220);
+    }, SEARCH_DEBOUNCE_MS);
 
     return () => {
-      cancelled = true;
+      controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [queryTrimmed, rsvp.labels.guestSearchEmpty, rsvp.labels.guestSearchHelp, rsvp.labels.guestSearchLoading, rsvp.messages.guestSearchFailed, selectedGuests]);
+  }, [queryTrimmed, rsvp.labels.guestSearchEmpty, rsvp.labels.guestSearchLoading, rsvp.messages.guestSearchFailed, selectedGuests]);
 
   const focusedGuest = highlightedIndex >= 0 && highlightedIndex < options.length ? options[highlightedIndex] : null;
 
@@ -309,6 +318,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       setSearchState("idle");
       setHighlightedIndex(-1);
       setSearchTone("neutral");
+      setSearchFeedback("");
       return;
     }
   }
@@ -340,16 +350,14 @@ export function RsvpSection({ content }: RsvpSectionProps) {
       }
 
       setSubmissionState("success");
-      setStatusMessage(submission.emailNotificationSent && result.payload.email
-        ? `${rsvp.messages.success} Enviamos uma confirmação para seu e-mail.`
-        : rsvp.messages.success);
+      setStatusMessage(getRsvpSuccessMessage(result.payload.guests));
       formRef.current?.reset();
       setQuery("");
       setSelectedGuests([]);
       setOptions([]);
       setSearchState("idle");
       setSearchTone("neutral");
-      setSearchFeedback(rsvp.labels.guestSearchHelp);
+      setSearchFeedback("");
       setHighlightedIndex(-1);
       setAttendanceErrors({});
       setFieldErrors({});
@@ -394,15 +402,14 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                 {rsvp.labels.guestSearch}
                 <span aria-hidden="true" className={styles.requiredMark}>*</span>
               </label>
-              <p className={styles.fieldHint} id="rsvp-guest-search-help">{rsvp.labels.guestSearchHelp}</p>
 
               <div className={styles.searchInputFrame}>
                 <input
                   aria-activedescendant={focusedGuest ? `${guestListboxId}-option-${focusedGuest.guestId}` : undefined}
                   aria-controls={guestListboxId}
                   aria-expanded={options.length > 0 && (searchState === "results" || searchState === "loading")}
-                  aria-describedby={[fieldErrors.guests ? fieldErrorId("guests") : null, "rsvp-guest-search-help", "rsvp-guest-search-status"].filter(Boolean).join(" ") || undefined}
-                  aria-invalid={isSearchInvalid || Boolean(fieldErrors.guests)}
+                  aria-describedby={[fieldErrors.guests ? fieldErrorId("guests") : null, "rsvp-guest-search-status"].filter(Boolean).join(" ") || undefined}
+                  aria-invalid={isSearchInvalid}
                   autoComplete="off"
                   id={guestSearchId}
                   maxLength={120}
@@ -412,20 +419,18 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                   onBlur={() => {
                     window.setTimeout(() => {
                       if (searchWrapRef.current && !searchWrapRef.current.contains(document.activeElement)) {
-                        setIsFocused(false);
                         if (queryTrimmed.length > 0) {
                           setQuery("");
                           setOptions([]);
                           setSearchState("idle");
                           setHighlightedIndex(-1);
                           setSearchTone("warning");
-                          setSearchFeedback("Selecione um nome da lista para adicioná-lo.");
+                          setSearchFeedback(rsvp.messages.guestSearchSelectFromList);
                         }
                       }
                     }, 0);
                   }}
                   onChange={(event) => {
-                    setIsFocused(true);
                     const nextValue = event.target.value;
                     setQuery(nextValue);
                     const trimmed = nextValue.trim();
@@ -434,21 +439,20 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                       setSearchState("idle");
                       setHighlightedIndex(-1);
                       setSearchTone("neutral");
-                      setSearchFeedback(rsvp.labels.guestSearchHelp);
+                      setSearchFeedback("");
                     } else if (trimmed.length < 2) {
                       setOptions([]);
                       setSearchState("idle");
                       setHighlightedIndex(-1);
                       setSearchTone("neutral");
-                      setSearchFeedback(rsvp.labels.guestSearchMinimum);
+                      setSearchFeedback("");
                     } else {
                       setSearchTone("neutral");
-                      setSearchFeedback(rsvp.labels.guestSearchHelp);
+                      setSearchFeedback("");
                     }
                     clearFieldError("guests");
                     clearSubmissionMessage();
                   }}
-                  onFocus={() => setIsFocused(true)}
                   onKeyDown={handleKeyDown}
                   ref={inputRef}
                   spellCheck={false}
@@ -487,11 +491,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                 <p className={styles.cardLabel}>Pessoas selecionadas</p>
               </div>
 
-              {selectedGuests.length === 0 ? (
-                <p className={styles.emptySelection}>
-                  Selecione um nome da lista para adicioná-lo.
-                </p>
-              ) : (
+              {selectedGuests.length > 0 ? (
                 <div className={styles.selectedGuestsList}>
                   {selectedGuests.map((guest) => (
                     <div className={styles.selectedGuestRow} key={guest.guestId}>
@@ -538,7 +538,7 @@ export function RsvpSection({ content }: RsvpSectionProps) {
                     </div>
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div className={styles.fieldGrid}>

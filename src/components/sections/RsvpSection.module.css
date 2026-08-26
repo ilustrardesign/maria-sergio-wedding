@@ -449,6 +449,11 @@
   line-height: 1.45;
 }
 
+.searchStatus:empty {
+  min-height: 0;
+  margin-top: 0;
+}
+
 .neutral {
   color: var(--color-warm-gray);
 }
@@ -470,7 +475,7 @@
 }
 
 .selectedGuestsSection {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .sectionHeading {
