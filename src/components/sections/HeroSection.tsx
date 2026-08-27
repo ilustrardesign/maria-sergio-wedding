@@ -1,31 +1,13 @@
-import { getImageProps } from "next/image";
-
 import type { WeddingContent } from "@/types/wedding";
+import { heroImages } from "@/generated/hero-images";
 
 import styles from "./EditorialSections.module.css";
 
 type HeroSectionProps = { content: WeddingContent };
 
 export function HeroSection({ content }: HeroSectionProps) {
-  const commonImageProps = {
-    alt: content.assets.heroPhoto.alt,
-    priority: true,
-    sizes: "100vw",
-  };
-  const {
-    props: { srcSet: desktopSrcSet, sizes: desktopSizes },
-  } = getImageProps({
-    ...commonImageProps,
-    height: content.assets.heroPhotoDesktop.height,
-    src: content.assets.heroPhotoDesktop.src,
-    width: content.assets.heroPhotoDesktop.width,
-  });
-  const { props: mobileImageProps } = getImageProps({
-    ...commonImageProps,
-    height: content.assets.heroPhotoMobile.height,
-    src: content.assets.heroPhotoMobile.src,
-    width: content.assets.heroPhotoMobile.width,
-  });
+  const desktop = heroImages.desktop;
+  const mobile = heroImages.mobile;
 
   return (
     <section aria-labelledby="hero-title" className={styles.hero} id="inicio">
@@ -33,10 +15,23 @@ export function HeroSection({ content }: HeroSectionProps) {
         <picture>
           <source
             media="(orientation: landscape), (min-aspect-ratio: 1/1)"
-            sizes={desktopSizes}
-            srcSet={desktopSrcSet}
+            sizes="100vw"
+            srcSet={desktop.srcSet}
+            type="image/webp"
           />
-          <img {...mobileImageProps} alt={content.assets.heroPhoto.alt} className={styles.heroImage} />
+          <source sizes="100vw" srcSet={mobile.srcSet} type="image/webp" />
+          <img
+            alt={content.assets.heroPhoto.alt}
+            className={styles.heroImage}
+            decoding="async"
+            fetchPriority="high"
+            height={mobile.height}
+            loading="eager"
+            sizes="100vw"
+            src={mobile.fallbackSrc}
+            srcSet={mobile.srcSet}
+            width={mobile.width}
+          />
         </picture>
       </div>
       <span aria-hidden="true" className={styles.heroVeil} />
