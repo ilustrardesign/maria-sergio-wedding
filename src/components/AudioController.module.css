@@ -90,20 +90,6 @@
   border-radius: 0.15rem;
 }
 
-.playerButton {
-  display: none;
-  width: 1.45rem;
-  height: 1.45rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgb(116 123 85 / 28%);
-  border-radius: 50%;
-  background: rgb(253 251 246 / 78%);
-  color: var(--color-olive-dark);
-  cursor: pointer;
-  font-size: 0.95rem;
-  line-height: 1;
-}
 
 @media (max-width: 48rem) {
   .audioControl {
@@ -115,8 +101,6 @@
     width: 2.85rem;
     height: 2.85rem;
   }
-
-  .playerButton { display: flex; }
 
   .spotifyPanel {
     top: calc(100% + 0.6rem);

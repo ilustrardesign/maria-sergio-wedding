@@ -35,6 +35,7 @@ export function renderRsvpAdminEmail(data: RsvpAdminEmailData) {
   const guestNames = data.selectedGuests.map((guest) => guest.displayName).join(" + ");
   const subject = `RSVP · ${guestNames || "Nova confirmação"}`;
   const siteUrl = getSiteUrl();
+  const monogramUrl = `${siteUrl.replace(/\/$/, "")}/images/brand/monogram-email.png`;
   const text = [
     "NOVA CONFIRMAÇÃO DE PRESENÇA",
     `Convidados: ${guestSummary(data.selectedGuests) || "-"}`,
@@ -54,7 +55,7 @@ export function renderRsvpAdminEmail(data: RsvpAdminEmailData) {
     `<tr><td style="padding:14px 0;border-top:1px solid #e6dcc9;"><p style="${labelStyle()}">Convite</p><p style="${valueStyle()}"><a href="${siteUrl}" style="color:#5c653f;text-decoration:none;">${escapeHtml(siteUrl)}</a></p></td></tr>`,
   ].join("");
 
-  const html = `<!doctype html><html><body style="${shell}"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f0e4;"><tr><td align="center" style="padding:34px 16px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px;background:#fbf8f0;border:1px solid #e4dac7;"><tr><td style="padding:34px 32px 22px;text-align:center;border-bottom:1px solid #e4dac7;"><p style="margin:0 0 10px;color:#8e7a45;font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.2em;line-height:1.4;text-transform:uppercase;">NOVA CONFIRMAÇÃO DE PRESENÇA</p><h1 style="margin:0;color:#465036;font-size:36px;font-weight:400;line-height:1.08;">Maria &amp; Sérgio</h1></td></tr><tr><td style="padding:22px 32px 30px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${rows}</table></td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html><body style="${shell}"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f0e4;"><tr><td align="center" style="padding:34px 16px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px;background:#fbf8f0;border:1px solid #e4dac7;"><tr><td style="padding:34px 32px 22px;text-align:center;border-bottom:1px solid #e4dac7;"><img src="${monogramUrl}" width="72" height="72" alt="Maria &amp; Sérgio" style="display:block;width:72px;height:72px;margin:0 auto 18px;object-fit:contain;" /><p style="margin:0 0 10px;color:#8e7a45;font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.2em;line-height:1.4;text-transform:uppercase;">NOVA CONFIRMAÇÃO DE PRESENÇA</p><h1 style="margin:0;color:#465036;font-size:36px;font-weight:400;line-height:1.08;">Maria &amp; Sérgio</h1></td></tr><tr><td style="padding:22px 32px 30px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${rows}</table></td></tr></table></td></tr></table></body></html>`;
 
   return { html, subject, text };
 }

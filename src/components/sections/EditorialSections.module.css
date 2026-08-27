@@ -344,7 +344,7 @@
 .giftImage {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 1;
+  aspect-ratio: 3 / 2;
   margin: 0;
   border: 1px solid rgb(180 154 97 / 18%);
   background: var(--color-warm-white);
@@ -421,7 +421,7 @@
 }
 .giftItemCustom .giftImage {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 3 / 2;
 }
 .giftItemCustom .giftBody {
   align-self: center;

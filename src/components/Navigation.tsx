@@ -178,6 +178,14 @@ export function Navigation({ content }: NavigationProps) {
                     </a>
                   </li>
                 ))}
+                {content.features.showAudioControl && content.audio.enabled ? (
+                  <li>
+                    <button className={styles.mobilePlayerButton} onClick={() => { closeMenu(); window.dispatchEvent(new Event("open-spotify-player")); }} type="button">
+                      <span aria-hidden="true">♪</span>
+                      Player da música
+                    </button>
+                  </li>
+                ) : null}
               </ul>
             </nav>
           </div>

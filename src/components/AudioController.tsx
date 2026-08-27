@@ -239,6 +239,12 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
       };
     }, [open]);
 
+    useEffect(() => {
+      const openFromMenu = () => setOpen(true);
+      window.addEventListener("open-spotify-player", openFromMenu);
+      return () => window.removeEventListener("open-spotify-player", openFromMenu);
+    }, []);
+
     useEffect(() => () => {
       if (hoverOpenTimeoutRef.current) window.clearTimeout(hoverOpenTimeoutRef.current);
       if (hoverCloseTimeoutRef.current) window.clearTimeout(hoverCloseTimeoutRef.current);
@@ -266,7 +272,7 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
     };
 
     return (
-      <div className={styles.audioControl} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) concealPlayer(); }} onFocus={revealPlayer} onMouseEnter={revealPlayer} onMouseLeave={concealPlayer}>
+      <div className={styles.audioControl} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) concealPlayer(); }} onFocus={(event) => { if ((event.target as HTMLElement).matches(":focus-visible")) revealPlayer(); }} onMouseEnter={revealPlayer} onMouseLeave={concealPlayer}>
         <button
           aria-pressed={isPlaying}
           aria-label={stateLabel}
@@ -277,7 +283,6 @@ export const AudioController = forwardRef<AudioControllerHandle, AudioController
         >
           <Icon name={isPlaying ? "pause" : "music"} size={19} />
         </button>
-        <button aria-label="Abrir player completo" className={styles.playerButton} onClick={() => setOpen(true)} type="button"><span aria-hidden="true">⌄</span></button>
         <div aria-hidden={!open} aria-label={title} className={panelClassName} onMouseEnter={revealPlayer} onMouseLeave={concealPlayer} role="dialog">
           <div className={styles.spotifyHeader}>
             <p>{title}</p>

@@ -8,6 +8,7 @@ import { BotanicalSprig } from "@/components/ui/Botanical";
 import { Icon } from "@/components/ui/Icon";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { GiftItem, GiftsConfig } from "@/types/wedding";
+import { giftImages } from "@/generated/gift-images";
 
 import styles from "./EditorialSections.module.css";
 
@@ -138,14 +139,17 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
                     "--gift-image-position": item.imagePosition ?? "center",
                   } as CSSProperties}
                 >
-                  <Image
-                    alt={item.image.alt}
-                    height={item.image.height}
-                    loading="lazy"
-                    sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 28vw"
-                    src={item.image.src}
-                    width={item.image.width}
-                  />
+                  {giftImages[item.image.src] ? (
+                    <picture>
+                      <source srcSet={giftImages[item.image.src].srcSet} sizes="(max-width: 40rem) calc(100vw - 2.5rem), (max-width: 56rem) calc((100vw - 3rem) / 2), min(24rem, (100vw - 8rem) / 3)" type="image/webp" />
+                      <img alt={item.image.alt} decoding="async" height={giftImages[item.image.src].height} loading="lazy" src={giftImages[item.image.src].src} srcSet={giftImages[item.image.src].srcSet} sizes="(max-width: 40rem) calc(100vw - 2.5rem), (max-width: 56rem) calc((100vw - 3rem) / 2), min(24rem, (100vw - 8rem) / 3)" width={giftImages[item.image.src].width} />
+                    </picture>
+                  ) : (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- static SVG fallback is intentionally outside the optimizer. */}
+                      <img alt={item.image.alt} decoding="async" height={item.image.height} loading="lazy" src={item.image.src} width={item.image.width} />
+                    </>
+                  )}
                 </figure>
                 <div className={styles.giftBody}>
                   <span className={styles.giftNumber}>{String(index + 1).padStart(2, "0")}</span>

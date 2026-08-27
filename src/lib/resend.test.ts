@@ -11,6 +11,8 @@ describe("Resend templates", () => {
     expect(email.text).toContain("https://mariaesergio.com");
     expect(email.html).toContain("style=");
     expect(email.html).not.toContain("<style");
+    expect(email.html).toContain("https://mariaesergio.com/images/brand/monogram-email.png");
+    expect(email.html).toContain('alt="Maria &amp; Sérgio"');
   });
 
   it("cobre copy de yes, mixed e no no convidado", () => {
@@ -40,6 +42,8 @@ describe("Resend templates", () => {
     expect(email.html).toContain("https://mariaesergio.com");
     expect(email.html).not.toContain(`invite_${"code"}`);
     expect(email.text).toContain("NOVA CONFIRMAÇÃO DE PRESENÇA");
+    expect(email.html).toContain("https://mariaesergio.com/images/brand/monogram-email.png");
+    expect(email.html).toContain('alt="Maria &amp; Sérgio"');
   });
 });
 
