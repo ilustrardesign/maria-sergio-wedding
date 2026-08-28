@@ -225,10 +225,11 @@
 .venuesSection { overflow: hidden; background: linear-gradient(180deg, #eef2ea, #f4f0e5); }
 .venueGrid { display: grid; margin-top: clamp(4rem, 8vw, 7rem); grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.5rem, 4vw, 4rem); }
 .venueCard { display: grid; grid-template-rows: auto 1fr; overflow: hidden; border: 1px solid rgb(116 123 85 / 18%); background: var(--color-warm-white); box-shadow: var(--shadow-paper); }
-.venueVisual { position: relative; min-height: 25rem; aspect-ratio: 1.12 / 1; overflow: hidden; background: linear-gradient(var(--color-blue), var(--color-sand)); }
-.venueVisual img { object-fit: cover; object-position: center 42%; filter: saturate(0.86) contrast(0.98); transform: scale(1.02); }
+.venueVisual { position: relative; min-height: 25rem; aspect-ratio: 1.108 / 1; overflow: hidden; background: linear-gradient(145deg, #dfe9e5, #f1e8d7); }
+.venuePicture { position: absolute; inset: 0; display: grid; place-items: center; padding: clamp(0.55rem, 1.2vw, 0.9rem); }
+.venuePicture img { display: block; width: 100%; height: 100%; object-fit: contain; filter: saturate(0.9) contrast(0.99); }
 .venueVisual::after { position: absolute; inset: auto 0 0; height: 28%; background: linear-gradient(transparent, rgb(247 242 231 / 94%)); content: ""; }
-.venueNumber { position: absolute; top: 1rem; left: 1rem; z-index: 2; display: grid; width: 2.65rem; height: 2.65rem; place-items: center; border: 1px solid rgb(180 154 97 / 52%); border-radius: 50%; background: rgb(253 251 246 / 82%); color: var(--color-olive-dark); font-family: var(--font-display); }
+.venueNumber { position: absolute; top: clamp(1.25rem, 2vw, 1.75rem); left: clamp(1.25rem, 2vw, 1.75rem); z-index: 2; display: grid; width: 2.65rem; height: 2.65rem; place-items: center; border: 1px solid rgb(180 154 97 / 52%); border-radius: 50%; background: rgb(253 251 246 / 82%); color: var(--color-olive-dark); font-family: var(--font-display); }
 .receptionVisual { display: grid; place-items: center; background: linear-gradient(160deg, #d9e5e2, #ebe0cb 72%); }
 .venueArch { width: 48%; height: 68%; border: 1px solid rgb(75 82 54 / 28%); border-bottom: 0; border-radius: 50% 50% 0 0; box-shadow: 0 0 0 1.5rem rgb(253 251 246 / 26%), 0 0 0 1.6rem rgb(180 154 97 / 16%); }
 .placeholderTag { position: absolute; bottom: 2rem; z-index: 2; width: 100%; padding: 0 1rem; color: var(--color-olive-dark); font-family: var(--font-functional); font-size: 0.68rem; letter-spacing: 0.1em; text-align: center; text-transform: uppercase; }
@@ -242,7 +243,9 @@
 .directionsAddress { color: var(--color-warm-gray); font-size: 0.92rem; line-height: 1.55; }
 .directionsActions { display: grid; gap: 0.65rem; margin-top: 1.7rem; }
 .venueEyebrow { color: var(--color-olive); font-family: var(--font-functional); font-size: var(--text-label); font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; }
-.venueDetails h3 { max-width: 16ch; margin: 0.55rem 0 1.7rem; color: var(--color-olive-dark); font-size: clamp(2rem, 3.5vw, 3.4rem); font-weight: 400; line-height: 1; }
+.venueDetails h3 { display: grid; max-width: 16ch; margin: 0.55rem 0 1.7rem; color: var(--color-olive-dark); font-size: clamp(1.45rem, 2.2vw, 2.25rem); font-weight: 400; line-height: 0.96; }
+.venueDetails h3 span { display: block; font-size: 0.72em; letter-spacing: 0.01em; }
+.venueDetails h3 strong { display: block; font: inherit; font-size: 1.32em; font-weight: 500; letter-spacing: -0.025em; white-space: nowrap; }
 .venueDetails dl { display: grid; gap: 0.9rem; margin-bottom: 1.7rem; }
 .venueDetails dl div { display: grid; grid-template-columns: 5rem 1fr; gap: 0.75rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgb(116 123 85 / 14%); }
 .venueDetails dt { color: var(--color-olive); font-family: var(--font-functional); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -491,7 +494,7 @@
   box-shadow: 0 24px 80px rgb(33 36 24 / 24%);
 }
 .giftModalPanelReady {
-  width: min(920px, calc(100vw - 32px));
+  width: min(1040px, calc(100vw - 32px));
 }
 .giftModalClose {
   position: absolute;
@@ -531,12 +534,35 @@
 }
 .giftModalReadyGrid {
   display: grid;
-  grid-template-columns: minmax(0, 0.88fr) minmax(18rem, 1.12fr);
-  gap: clamp(1.6rem, 4vw, 3rem);
-  align-items: center;
+  grid-template-columns: minmax(20rem, 1.15fr) minmax(19rem, 0.85fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: start;
 }
 .giftModalSummary {
   min-width: 0;
+}
+.giftModalImage {
+  overflow: hidden;
+  margin: 0 0 1.7rem;
+  border: 1px solid rgb(180 154 97 / 26%);
+  background: var(--color-warm-white);
+}
+.giftModalImage picture,
+.giftModalImage img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.giftModalImage img {
+  object-fit: contain;
+  object-position: var(--gift-image-position, center);
+}
+.customGiftCopy {
+  margin-top: 0.8rem;
+  color: var(--color-warm-gray);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
 }
 .giftModalInstruction,
 .pixLoading {
@@ -563,13 +589,17 @@
   text-transform: uppercase;
 }
 .customAmount input {
+  width: 100%;
   min-height: 3rem;
-  border: 1px solid rgb(116 123 85 / 32%);
-  background: rgb(255 255 255 / 42%);
+  border: 0;
+  background: transparent;
   color: var(--color-charcoal);
   font-size: 1rem;
   padding-inline: 0.85rem;
 }
+.currencyInput { display: flex; min-height: 3.3rem; align-items: center; border: 1px solid rgb(116 123 85 / 32%); background: rgb(255 255 255 / 42%); }
+.currencyInput b { padding-left: 0.95rem; color: var(--color-olive-dark); font-family: var(--font-functional); font-size: 0.9rem; letter-spacing: 0.08em; }
+.customAmount small { color: var(--color-warm-gray); font-family: var(--font-reading); font-size: 0.78rem; font-weight: 400; letter-spacing: normal; line-height: 1.4; text-transform: none; }
 .giftPayButton { width: 100%; margin-top: 1.5rem; }
 .pixState,
 .pixError,
@@ -716,7 +746,7 @@
   .photoFrame img,
   .galleryPhoto img { object-position: var(--photo-position-mobile, center); }
   .venueGrid { grid-template-columns: 1fr; }
-  .venueVisual { min-height: min(86vw, 30rem); aspect-ratio: 1.16 / 1; }
+  .venueVisual { min-height: min(86vw, 30rem); aspect-ratio: 1.108 / 1; }
   .directionsBackdrop { align-items: end; padding: 0; }
   .directionsSheet { width: 100%; padding: 2rem var(--gutter) max(2rem, env(safe-area-inset-bottom)); }
   .dressSection :global(.section-inner), .giftsInner { grid-template-columns: 1fr; }

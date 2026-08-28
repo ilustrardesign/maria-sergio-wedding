@@ -9,6 +9,7 @@ import { Icon } from "@/components/ui/Icon";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { GiftItem, GiftsConfig } from "@/types/wedding";
 import { giftImages } from "@/generated/gift-images";
+import { formatBrazilianCurrency, formatBrazilianCurrencyInput, normalizeBrazilianCurrency } from "@/lib/currency";
 
 import styles from "./EditorialSections.module.css";
 
@@ -17,10 +18,6 @@ type ChargeState =
   | { status: "loading"; gift: GiftItem; amount: string }
   | { status: "ready"; gift: GiftItem; amount: string; txid: string; pixCopyPaste: string; qrCode: string }
   | { status: "error"; gift: GiftItem; amount: string; message: string };
-
-function normalizeAmount(value: string) {
-  return value.replace(/[^\d,]/g, "").replace(",", ".");
-}
 
 function giftPriceToNumber(price: string) {
   const normalized = price.replace(/[^\d,]/g, "").replace(",", ".");
@@ -49,14 +46,11 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
   const [charge, setCharge] = useState<ChargeState>({ status: "idle" });
   const [copyMessage, setCopyMessage] = useState("");
 
-  const selectedAmount = useMemo(() => {
-    if (!selectedGift) return "";
-    return selectedGift.customAmount ? customAmount.trim() : selectedGift.price;
-  }, [customAmount, selectedGift]);
+  const hasValidCustomAmount = Number(normalizeBrazilianCurrency(customAmount)) > 0;
   const displayItems = useMemo(() => sortGiftsForDisplay(gifts.items), [gifts.items]);
 
   async function prepareCharge(gift: GiftItem) {
-    const amount = gift.customAmount ? normalizeAmount(customAmount) : gift.price;
+    const amount = gift.customAmount ? normalizeBrazilianCurrency(customAmount) : gift.price;
     setCharge({ status: "loading", gift, amount });
 
     try {
@@ -154,7 +148,7 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
                 <div className={styles.giftBody}>
                   <span className={styles.giftNumber}>{String(index + 1).padStart(2, "0")}</span>
                   <p>{item.title}</p>
-                  <strong>{item.price}</strong>
+                  <strong>{item.customAmount ? item.price : formatBrazilianCurrency(item.price)}</strong>
                   {item.description ? <small>{item.description}</small> : null}
                 </div>
                 <button className={styles.giftButton} onClick={() => openGift(item)} type="button">
@@ -174,9 +168,20 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
             </button>
             <div className={charge.status === "ready" ? styles.giftModalReadyGrid : undefined}>
               <div className={styles.giftModalSummary}>
-                <span className={styles.giftModalEyebrow}>Enviar presente</span>
+                <figure className={styles.giftModalImage} style={{ aspectRatio: `${selectedGift.image.width} / ${selectedGift.image.height}` }}>
+                  {giftImages[selectedGift.image.src] ? (
+                    <picture>
+                      <source sizes="(max-width: 40rem) calc(100vw - 3rem), min(42vw, 32rem)" srcSet={giftImages[selectedGift.image.src].srcSet} type="image/webp" />
+                      <img alt={selectedGift.image.alt} decoding="async" height={giftImages[selectedGift.image.src].height} src={giftImages[selectedGift.image.src].src} srcSet={giftImages[selectedGift.image.src].srcSet} sizes="(max-width: 40rem) calc(100vw - 3rem), min(42vw, 32rem)" width={giftImages[selectedGift.image.src].width} />
+                    </picture>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element -- the custom-amount illustration has no generated WebP variant.
+                    <img alt={selectedGift.image.alt} decoding="async" height={selectedGift.image.height} src={selectedGift.image.src} width={selectedGift.image.width} />
+                  )}
+                </figure>
                 <h3 id="gift-modal-title">{selectedGift.title}</h3>
-                <p className={styles.giftModalPrice}>{charge.status === "ready" ? `R$ ${charge.amount.replace(".", ",")}` : selectedGift.price}</p>
+                <p className={styles.giftModalPrice}>{selectedGift.customAmount && charge.status !== "ready" ? selectedGift.price : formatBrazilianCurrency(charge.status === "ready" ? charge.amount : selectedGift.price)}</p>
+                {selectedGift.customAmount && charge.status !== "ready" ? <p className={styles.customGiftCopy}>Escolha o valor. A gente promete usar com sabedoria. Talvez.</p> : null}
                 {charge.status === "ready" ? (
                   <p className={styles.giftModalInstruction}>
                     Escaneie o QR Code com o aplicativo do seu banco ou use o Pix Copia e Cola.
@@ -185,18 +190,14 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
                 {selectedGift.customAmount && charge.status !== "ready" ? (
                   <label className={styles.customAmount}>
                     Valor do presente
-                    <input
-                      inputMode="decimal"
-                      onChange={(event) => setCustomAmount(event.target.value)}
-                      placeholder="Ex.: 250,00"
-                      value={customAmount}
-                    />
+                    <span className={styles.currencyInput}><b>R$</b><input aria-describedby="custom-amount-hint" inputMode="numeric" onChange={(event) => setCustomAmount(formatBrazilianCurrencyInput(event.target.value))} placeholder="0,00" value={customAmount} /></span>
+                    <small id="custom-amount-hint">Digite apenas os números. Ex.: 25000 = R$ 250,00.</small>
                   </label>
                 ) : null}
                 {selectedGift.customAmount && charge.status !== "ready" ? (
                   <button
                     className={styles.giftPayButton}
-                    disabled={charge.status === "loading" || !selectedAmount}
+                    disabled={charge.status === "loading" || !hasValidCustomAmount}
                     onClick={() => prepareCharge(selectedGift)}
                     type="button"
                   >
@@ -212,15 +213,15 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
                     </button>
                   </div>
                 ) : null}
-                <p className={styles.giftFinePrint}>
+                {!selectedGift.customAmount || hasValidCustomAmount || charge.status === "ready" ? <p className={styles.giftFinePrint}>
                   O site não confirma pagamentos automaticamente.
-                </p>
+                </p> : null}
               </div>
               {charge.status === "ready" ? (
                 <div className={styles.pixState}>
                   <h4>Pix pronto para pagamento</h4>
                   <Image alt="" height={220} src={charge.qrCode} unoptimized width={220} />
-                  <strong>R$ {charge.amount.replace(".", ",")}</strong>
+                  <strong>{formatBrazilianCurrency(charge.amount)}</strong>
                   <input
                     aria-label="Pix Copia e Cola"
                     className={styles.pixPayloadInput}

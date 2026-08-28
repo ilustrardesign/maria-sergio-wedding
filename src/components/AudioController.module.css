@@ -1,8 +1,5 @@
 .audioControl {
-  position: fixed;
-  top: max(0.9rem, env(safe-area-inset-top));
-  right: max(1.15rem, env(safe-area-inset-right));
-  z-index: var(--z-controls);
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -93,8 +90,8 @@
 
 @media (max-width: 48rem) {
   .audioControl {
-    top: max(0.82rem, env(safe-area-inset-top));
-    right: calc(1rem + 2.85rem + 0.65rem + env(safe-area-inset-right));
+    top: auto;
+    right: auto;
   }
 
   .audioButton {

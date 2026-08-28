@@ -5,8 +5,9 @@
   "scripts": {
     "generate:hero-images": "node scripts/generate-hero-images.mjs",
     "generate:gift-images": "node scripts/generate-gift-images.mjs",
+    "generate:venue-images": "node scripts/generate-venue-images.mjs",
     "dev": "next dev",
-    "build": "node scripts/generate-hero-images.mjs && node scripts/generate-gift-images.mjs && next build",
+    "build": "node scripts/generate-hero-images.mjs && node scripts/generate-gift-images.mjs && node scripts/generate-venue-images.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

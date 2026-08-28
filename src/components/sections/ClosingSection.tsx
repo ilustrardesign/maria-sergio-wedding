@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { BotanicalCorner } from "@/components/ui/Botanical";
 import { Icon } from "@/components/ui/Icon";
@@ -22,6 +22,7 @@ function nextIsoDate(isoDate: string) {
 
 export function ClosingSection({ content }: ClosingSectionProps) {
   const [liveStatus, setLiveStatus] = useState<LiveStatus>({ id: 0, message: "" });
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const calendar = content.closing.calendar;
 
   const calendarEvent = useMemo(() => ({
@@ -33,6 +34,19 @@ export function ClosingSection({ content }: ClosingSectionProps) {
   }), [calendar, content.date.isoDate]);
 
   const googleCalendarUrl = useMemo(() => createGoogleCalendarUrl(calendarEvent), [calendarEvent]);
+
+  useEffect(() => {
+    if (!calendarOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCalendarOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [calendarOpen]);
 
   function announce(message: string) {
     setLiveStatus((current) => ({ id: current.id + 1, message }));
@@ -70,37 +84,42 @@ export function ClosingSection({ content }: ClosingSectionProps) {
         <p className={styles.names}>{content.closing.names}</p>
         <time className={styles.date} dateTime={content.date.isoDate}>{content.closing.date}</time>
 
-        <div aria-label="Calendário" className={styles.actions} role="group">
+        <div aria-label="Calendário" className={styles.actions}>
           <button
             className={["button", styles.action, styles.actionPrimary].join(" ")}
-            onClick={downloadCalendarFile}
+            onClick={() => setCalendarOpen(true)}
             type="button"
           >
             <Icon name="calendar" size={18} />
-            {calendar.downloadLabel}
-            <span aria-hidden="true" className={styles.actionMeta}>.ics</span>
+            Adicionar ao calendário
           </button>
-
-          <a
-            className={["button", styles.action].join(" ")}
-            href={googleCalendarUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            <Icon name="calendar" size={18} />
-            Google Calendar
-          </a>
         </div>
 
         <button className={styles.backLink} onClick={scrollToTop} type="button">
           <Icon name="top" size={17} />
           {content.closing.backToTopLabel}
         </button>
+        <p className={styles.developerCredit}>Desenvolvido carinhosamente por: <a href="https://wa.me/59161617222" rel="noreferrer" target="_blank">Ivo Pereira</a></p>
 
         <p aria-live="polite" className="sr-only" key={liveStatus.id} role="status">
           {liveStatus.message}
         </p>
       </div>
+      {calendarOpen ? (
+        <div aria-labelledby="calendar-modal-title" aria-modal="true" className={styles.calendarBackdrop} role="dialog">
+          <button aria-label="Fechar calendário" className={styles.calendarBackdropDismiss} onClick={() => setCalendarOpen(false)} type="button" />
+          <div className={styles.calendarSheet}>
+            <button aria-label="Fechar" className={styles.calendarClose} onClick={() => setCalendarOpen(false)} type="button"><Icon name="close" size={18} /></button>
+            <p className={styles.calendarEyebrow}>Adicionar ao calendário</p>
+            <h3 id="calendar-modal-title">Maria &amp; Sérgio</h3>
+            <p className={styles.calendarDate}>{content.closing.date}</p>
+            <div className={styles.calendarModalActions}>
+              <a className={["button", styles.calendarPrimaryAction].join(" ")} href={googleCalendarUrl} rel="noreferrer" target="_blank"><Icon name="calendar" size={17} />Google Calendar</a>
+              <button className={["button", styles.calendarSecondaryAction].join(" ")} onClick={() => { downloadCalendarFile(); setCalendarOpen(false); }} type="button"><Icon name="calendar" size={17} />Baixar .ics</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

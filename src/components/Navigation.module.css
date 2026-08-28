@@ -112,8 +112,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  margin-left: auto;
-  margin-right: 3.85rem;
+  margin: 0;
   padding: 0.55rem 0.85rem;
   border: 1px solid rgb(116 123 85 / 30%);
   border-radius: var(--radius-pill);
@@ -128,6 +127,7 @@
   backdrop-filter: blur(8px);
   transition: background var(--duration-fast), color var(--duration-fast), transform var(--duration-fast);
 }
+.headerActions { display: flex; align-items: center; gap: 0.65rem; margin-left: auto; }
 
 .menuButton:hover {
   background: var(--color-olive-dark);
@@ -306,7 +306,7 @@
 @media (max-width: 40rem) {
   .bar { min-height: 4.4rem; }
   .navigationVisible .bar { min-height: 4.15rem; }
-  .menuButton { min-width: 3rem; width: 3rem; padding-inline: 0; }
+  .menuButton { min-width: 3rem; width: 3rem; margin-right: 0; padding-inline: 0; }
   .bar { padding-right: max(1rem, env(safe-area-inset-right)); }
   .menuButton span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
   .mobilePanel { padding-top: 6.35rem; }

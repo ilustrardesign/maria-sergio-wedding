@@ -145,7 +145,8 @@ export const weddingContent = {
       note: confirmed("Será uma alegria receber você para testemunhar este momento."),
       directionsUrl: confirmed("https://www.google.com/maps/search/?api=1&query=Par%C3%B3quia%20Nossa%20Senhora%20de%20Nazar%C3%A9%20Avenida%20Coronel%20Cardoso%2015%20Portal%20do%20Po%C3%A7o%20Cabedelo%20PB"),
       directionsLabel: "Como chegar",
-      illustration: confirmed("/images/wedding/venues/ceremony-church-clean.png"),
+      illustration: confirmed("/images/wedding/venues/masters/cerimonia-master.png"),
+      titleLines: ["Paróquia Nossa", "Sra. de Nazaré"],
     },
     {
       id: "reception",
@@ -158,7 +159,8 @@ export const weddingContent = {
       note: confirmed("Depois do sim, a celebração continua."),
       directionsUrl: confirmed("https://www.google.com/maps/search/?api=1&query=Buffet%20Doce%20Mel%20Rua%20Manuel%20Miguel%20Morais%2054%20Banc%C3%A1rios%20Jo%C3%A3o%20Pessoa%20PB"),
       directionsLabel: "Como chegar",
-      illustration: confirmed("/images/wedding/venues/reception-buffet-doce-mel.png"),
+      illustration: confirmed("/images/wedding/venues/masters/recepcao-master.png"),
+      titleLines: ["Buffet", "Doce Mel"],
     },
   ],
   schedule: {

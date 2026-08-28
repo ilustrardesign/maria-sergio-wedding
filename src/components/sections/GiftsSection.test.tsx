@@ -128,6 +128,15 @@ describe("GiftsSection Pix flow", () => {
     expect(await screen.findByLabelText("Pix Copia e Cola")).toHaveValue(pixPayload);
   });
 
+  it("exibe no modal a imagem do presente selecionado", async () => {
+    vi.stubGlobal("fetch", mockPixSuccess());
+
+    render(<GiftsSection gifts={gifts} />);
+    await userEvent.click(screen.getAllByRole("button", { name: "Escolher este presente" })[0]);
+
+    expect(await within(screen.getByRole("dialog")).findByRole("img", { name: "Presente" })).toBeInTheDocument();
+  });
+
   it("mantém presente de valor livre sem gerar Pix antes do valor", async () => {
     const fetchMock = mockPixSuccess("250.00");
     vi.stubGlobal("fetch", fetchMock);

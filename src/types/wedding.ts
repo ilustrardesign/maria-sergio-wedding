@@ -68,6 +68,7 @@ export interface VenueConfig {
   directionsUrl: EditableField<string>;
   directionsLabel: string;
   illustration: EditableField<string>;
+  titleLines: readonly [string, string];
 }
 export interface ScheduleItem { id: string; time: EditableField<string>; title: string; description: EditableField<string>; icon: ScheduleIcon; }
 export interface ScheduleConfig { eyebrow: string; title: string; items: ScheduleItem[]; }

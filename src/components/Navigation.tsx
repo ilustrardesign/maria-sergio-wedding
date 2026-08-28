@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Icon } from "@/components/ui/Icon";
 import type { WeddingContent } from "@/types/wedding";
 
 import styles from "./Navigation.module.css";
 
-type NavigationProps = { content: WeddingContent };
+type NavigationProps = { content: WeddingContent; headerAction?: ReactNode };
 
-export function Navigation({ content }: NavigationProps) {
+export function Navigation({ content, headerAction }: NavigationProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [progress, setProgress] = useState(0);
   const [scrolled, setScrolled] = useState(false);
@@ -145,6 +145,8 @@ export function Navigation({ content }: NavigationProps) {
             </ul>
           </nav>
 
+          <div className={styles.headerActions}>
+          {headerAction}
           <button
             aria-controls="mobile-navigation-panel"
             aria-expanded={menuOpen}
@@ -157,6 +159,7 @@ export function Navigation({ content }: NavigationProps) {
             <span aria-hidden="true">{menuOpen ? "Fechar" : "Menu"}</span>
             <Icon name={menuOpen ? "close" : "menu"} size={21} />
           </button>
+          </div>
         </div>
 
         {menuOpen ? (

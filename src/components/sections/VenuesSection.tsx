@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/ui/Icon";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import type { VenueConfig } from "@/types/wedding";
+import { venueImages } from "@/generated/venue-images";
 
 import styles from "./EditorialSections.module.css";
 
@@ -68,16 +68,15 @@ export function VenuesSection({ venues }: VenuesSectionProps) {
         <h2 className="sr-only" id="venues-title">Locais da cerimônia e recepção</h2>
         <div className={styles.venueGrid}>
           {venues.map((venue, index) => {
+            const image = venueImages[venue.id];
             return (
               <article className={styles.venueCard} key={venue.id} data-reveal>
                 <div className={[styles.venueVisual, venue.id === "reception" ? styles.receptionVisual : ""].join(" ")}>
                   {venue.illustration.value ? (
-                    <Image
-                      alt={venue.id === "ceremony" ? "Aquarela da Paróquia Nossa Senhora de Nazaré" : "Imagem do local da recepção"}
-                      fill
-                      sizes="(max-width: 767px) 92vw, 45vw"
-                      src={venue.illustration.value}
-                    />
+                    <picture className={styles.venuePicture}>
+                      <source sizes="(max-width: 767px) 92vw, 45vw" srcSet={image.srcSet} type="image/webp" />
+                      <img alt={venue.id === "ceremony" ? "Paróquia Nossa Senhora de Nazaré" : "Buffet Doce Mel"} decoding="async" height={image.height} loading="lazy" sizes="(max-width: 767px) 92vw, 45vw" src={image.src} srcSet={image.srcSet} width={image.width} />
+                    </picture>
                   ) : (
                     <span aria-hidden="true" className={styles.venueArch} />
                   )}
@@ -88,7 +87,7 @@ export function VenuesSection({ venues }: VenuesSectionProps) {
                     <Icon className={styles.venueIcon} name={venue.id === "ceremony" ? "church" : "sparkle"} size={22} />
                     <p className={styles.venueEyebrow}>{venue.eyebrow}</p>
                   </div>
-                  <h3 aria-label={venue.id === "ceremony" ? "Paróquia Nossa Senhora de Nazaré" : venue.name}>{venue.name}</h3>
+                  <h3 aria-label={venue.id === "ceremony" ? "Paróquia Nossa Senhora de Nazaré" : venue.name}><span>{venue.titleLines[0]}</span><strong>{venue.titleLines[1]}</strong></h3>
                   <dl>
                     {venue.time.value ? <div><dt>Horário</dt><dd><FieldValue value={venue.time.value} /></dd></div> : null}
                     {venue.city.value ? <div><dt>Local</dt><dd><FieldValue value={venue.city.value} />{venue.region.value ? ", " + venue.region.value : ""}</dd></div> : null}

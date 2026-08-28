@@ -53,8 +53,7 @@ export function WeddingExperience({ content }: WeddingExperienceProps) {
     <div className="site-shell">
       <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
       <InvitationOpening monogramSrc={content.assets.monogram.src} onOpen={handleOpen} />
-      <Navigation content={content} />
-      {content.features.showAudioControl ? (
+      <Navigation content={content} headerAction={content.features.showAudioControl ? (
         <AudioController
           enabled={content.audio.enabled}
           ref={audioRef}
@@ -62,7 +61,7 @@ export function WeddingExperience({ content }: WeddingExperienceProps) {
           spotifyUrl={content.audio.spotifyUrl}
           title={content.audio.title}
         />
-      ) : null}
+      ) : null} />
       <main id="conteudo" ref={mainRef}>
         <HeroSection content={content} />
         <CountdownSection content={content} />
