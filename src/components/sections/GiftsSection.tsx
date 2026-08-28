@@ -162,13 +162,13 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
       {selectedGift ? (
         <div aria-labelledby="gift-modal-title" aria-modal="true" className={styles.giftModal} role="dialog">
           <button aria-label="Fechar presente" className={styles.giftModalBackdrop} onClick={closeGift} type="button" />
-          <div className={[styles.giftModalPanel, charge.status === "ready" ? styles.giftModalPanelReady : ""].filter(Boolean).join(" ")}>
+          <div className={styles.giftModalPanel}>
             <button aria-label="Fechar" className={styles.giftModalClose} onClick={closeGift} type="button">
               <Icon name="close" size={18} />
             </button>
-            <div className={charge.status === "ready" ? styles.giftModalReadyGrid : undefined}>
+            <div className={styles.giftModalReadyGrid}>
               <div className={styles.giftModalSummary}>
-                <figure className={styles.giftModalImage} style={{ aspectRatio: `${selectedGift.image.width} / ${selectedGift.image.height}` }}>
+                <figure className={[styles.giftModalImage, selectedGift.customAmount ? styles.giftModalImageCustom : ""].filter(Boolean).join(" ")}>
                   {giftImages[selectedGift.image.src] ? (
                     <picture>
                       <source sizes="(max-width: 40rem) calc(100vw - 3rem), min(42vw, 32rem)" srcSet={giftImages[selectedGift.image.src].srcSet} type="image/webp" />
@@ -180,13 +180,10 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
                   )}
                 </figure>
                 <h3 id="gift-modal-title">{selectedGift.title}</h3>
-                <p className={styles.giftModalPrice}>{selectedGift.customAmount && charge.status !== "ready" ? selectedGift.price : formatBrazilianCurrency(charge.status === "ready" ? charge.amount : selectedGift.price)}</p>
+                {selectedGift.customAmount && charge.status !== "ready" ? <p className={styles.giftModalPrice}>{selectedGift.price}</p> : null}
                 {selectedGift.customAmount && charge.status !== "ready" ? <p className={styles.customGiftCopy}>Escolha o valor. A gente promete usar com sabedoria. Talvez.</p> : null}
-                {charge.status === "ready" ? (
-                  <p className={styles.giftModalInstruction}>
-                    Escaneie o QR Code com o aplicativo do seu banco ou use o Pix Copia e Cola.
-                  </p>
-                ) : null}
+              </div>
+              <div className={[styles.giftModalPayment, selectedGift.customAmount && charge.status !== "ready" ? styles.giftModalPaymentInitial : ""].filter(Boolean).join(" ")}>
                 {selectedGift.customAmount && charge.status !== "ready" ? (
                   <label className={styles.customAmount}>
                     Valor do presente
@@ -213,30 +210,31 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
                     </button>
                   </div>
                 ) : null}
-                {!selectedGift.customAmount || hasValidCustomAmount || charge.status === "ready" ? <p className={styles.giftFinePrint}>
-                  O site não confirma pagamentos automaticamente.
-                </p> : null}
+                {charge.status === "ready" ? (
+                  <div className={styles.pixState}>
+                    <div className={styles.pixPrimary}>
+                      <h4>Pix pronto para pagamento</h4>
+                      <Image alt="" height={320} src={charge.qrCode} unoptimized width={320} />
+                      <strong>{formatBrazilianCurrency(charge.amount)}</strong>
+                    </div>
+                    <div className={styles.pixActions}>
+                      <input
+                        aria-label="Pix Copia e Cola"
+                        className={styles.pixPayloadInput}
+                        onFocus={(event) => event.currentTarget.select()}
+                        readOnly
+                        value={charge.pixCopyPaste}
+                      />
+                      <button className={styles.pixCopyButton} onClick={() => copyPixCode(charge.pixCopyPaste)} type="button">
+                        {copyMessage === "Código copiado" ? "Código copiado" : "Copiar código Pix"}
+                      </button>
+                      <p aria-live="polite" className={styles.pixCopyStatus}>{copyMessage}</p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-              {charge.status === "ready" ? (
-                <div className={styles.pixState}>
-                  <h4>Pix pronto para pagamento</h4>
-                  <Image alt="" height={220} src={charge.qrCode} unoptimized width={220} />
-                  <strong>{formatBrazilianCurrency(charge.amount)}</strong>
-                  <input
-                    aria-label="Pix Copia e Cola"
-                    className={styles.pixPayloadInput}
-                    onFocus={(event) => event.currentTarget.select()}
-                    readOnly
-                    value={charge.pixCopyPaste}
-                  />
-                  <button className={styles.pixCopyButton} onClick={() => copyPixCode(charge.pixCopyPaste)} type="button">
-                    {copyMessage === "Código copiado" ? "Código copiado" : "Copiar código Pix"}
-                  </button>
-                  <p aria-live="polite" className={styles.pixCopyStatus}>{copyMessage}</p>
-                  <small>Após concluir o pagamento no aplicativo do seu banco, você pode fechar esta janela.</small>
-                </div>
-              ) : null}
             </div>
+            {charge.status === "ready" ? <div className={styles.giftModalFooter}>Após concluir o pagamento no aplicativo do seu banco, você pode fechar esta janela.</div> : null}
           </div>
         </div>
       ) : null}

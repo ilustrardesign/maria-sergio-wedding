@@ -1,4 +1,7 @@
+"use client";
+
 import type { WeddingContent } from "@/types/wedding";
+import type { MouseEvent } from "react";
 import { heroImages } from "@/generated/hero-images";
 
 import styles from "./EditorialSections.module.css";
@@ -9,6 +12,44 @@ type HeroSectionProps = { content: WeddingContent };
 export function HeroSection({ content }: HeroSectionProps) {
   const desktop = heroImages.desktop;
   const mobile = heroImages.mobile;
+
+  function scrollToCountdown(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+
+    const header = document.querySelector<HTMLElement>("header");
+    const countdown = document.getElementById("data");
+    if (!header || !countdown) return;
+
+    const targetTop = countdown.getBoundingClientRect().top + window.scrollY;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let lastScrollY = -1;
+    let stillFrames = 0;
+    let frames = 0;
+
+    const alignToHeader = (behavior: ScrollBehavior) => {
+      const currentHeader = document.querySelector<HTMLElement>("header");
+      const currentCountdown = document.getElementById("data");
+      if (!currentHeader || !currentCountdown) return;
+      const exactTop = currentCountdown.getBoundingClientRect().top + window.scrollY - currentHeader.getBoundingClientRect().height;
+      window.scrollTo({ top: exactTop, behavior });
+    };
+
+    const settle = () => {
+      frames += 1;
+      if (Math.abs(window.scrollY - lastScrollY) < 0.5) stillFrames += 1;
+      else stillFrames = 0;
+      lastScrollY = window.scrollY;
+
+      if (reducedMotion || stillFrames >= 12 || frames >= 120) {
+        alignToHeader("auto");
+        return;
+      }
+      window.requestAnimationFrame(settle);
+    };
+
+    window.scrollTo({ top: targetTop - header.getBoundingClientRect().height, behavior: reducedMotion ? "auto" : "smooth" });
+    window.requestAnimationFrame(settle);
+  }
 
   return (
     <section aria-labelledby="hero-title" className={styles.hero} id="inicio">
@@ -50,7 +91,7 @@ export function HeroSection({ content }: HeroSectionProps) {
           <p className={[styles.heroLocation, styles.heroStagger].join(" ")}>{content.hero.location}</p>
         </div>
       </div>
-      <a aria-label="Ir para a contagem regressiva" className={styles.scrollCue} href="#data">
+      <a aria-label="Ir para a contagem regressiva" className={styles.scrollCue} href="#data" onClick={scrollToCountdown}>
         <i aria-hidden="true" />
       </a>
     </section>
