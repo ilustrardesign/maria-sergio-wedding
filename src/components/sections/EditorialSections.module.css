@@ -531,7 +531,7 @@
 }
 .giftModalReadyGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(19rem, 0.88fr);
+  grid-template-columns: 52fr 48fr;
   gap: 0;
   align-items: stretch;
 }
@@ -558,8 +558,14 @@
   object-fit: contain;
   object-position: var(--gift-image-position, center);
 }
-.giftModalImageCustom { aspect-ratio: 4 / 3 !important; }
-.giftModalImageCustom img { width: 100%; height: 100%; padding: clamp(1rem, 3vw, 2rem); object-fit: contain; }
+.giftModalImageCustom {
+  width: clamp(13.75rem, 19vw, 17.5rem);
+  overflow: visible;
+  aspect-ratio: auto !important;
+  border: 0;
+  background: transparent;
+}
+.giftModalImageCustom img { width: 100%; height: auto; padding: 0; object-fit: contain; }
 .giftModalPayment {
   display: flex;
   min-width: 0;
@@ -567,7 +573,7 @@
   border-left: 1px solid rgb(116 123 85 / 18%);
   padding-left: clamp(1.5rem, 3vw, 2.75rem);
 }
-.giftModalPaymentInitial { justify-content: flex-end; }
+.giftModalPaymentInitial { justify-content: center; }
 .customGiftCopy {
   margin-top: 0.8rem;
   color: var(--color-warm-gray);
