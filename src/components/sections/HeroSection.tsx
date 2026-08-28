@@ -2,6 +2,7 @@ import type { WeddingContent } from "@/types/wedding";
 import { heroImages } from "@/generated/hero-images";
 
 import styles from "./EditorialSections.module.css";
+import { HeroVideo } from "./HeroVideo";
 
 type HeroSectionProps = { content: WeddingContent };
 
@@ -33,6 +34,12 @@ export function HeroSection({ content }: HeroSectionProps) {
             width={mobile.width}
           />
         </picture>
+        <HeroVideo
+          desktopPoster={desktop.src}
+          desktopSrc="/videos/hero/hero-desktop.mp4"
+          mobilePoster={mobile.src}
+          mobileSrc="/videos/hero/hero-mobile.mp4"
+        />
       </div>
       <span aria-hidden="true" className={styles.heroVeil} />
       <div className={styles.heroInner}>

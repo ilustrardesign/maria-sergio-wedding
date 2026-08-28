@@ -140,7 +140,7 @@ export function GiftsSection({ gifts }: { gifts: GiftsConfig }) {
                   } as CSSProperties}
                 >
                   {giftImages[item.image.src] ? (
-                    <picture>
+                    <picture className={styles.giftPicture}>
                       <source srcSet={giftImages[item.image.src].srcSet} sizes="(max-width: 40rem) calc(100vw - 2.5rem), (max-width: 56rem) calc((100vw - 3rem) / 2), min(24rem, (100vw - 8rem) / 3)" type="image/webp" />
                       <img alt={item.image.alt} decoding="async" height={giftImages[item.image.src].height} loading="lazy" src={giftImages[item.image.src].src} srcSet={giftImages[item.image.src].srcSet} sizes="(max-width: 40rem) calc(100vw - 2.5rem), (max-width: 56rem) calc((100vw - 3rem) / 2), min(24rem, (100vw - 8rem) / 3)" width={giftImages[item.image.src].width} />
                     </picture>

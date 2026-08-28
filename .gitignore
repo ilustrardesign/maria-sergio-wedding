@@ -17,6 +17,12 @@ Thumbs.db
 
 .pnpm-store/
 
+# Masters e evidências locais do hero; os derivados de public/videos são runtime.
+/Video Horizontal.mp4
+/Video Vertical.mp4
+/public/videos/hero/hero-desktop-master.mp4
+/artifacts/hero-video-validation/
+
 # Archivos locales de trabajo
 excalidraw.log
 por.traineddata
