@@ -23,6 +23,7 @@ function nextIsoDate(isoDate: string) {
 export function ClosingSection({ content }: ClosingSectionProps) {
   const [liveStatus, setLiveStatus] = useState<LiveStatus>({ id: 0, message: "" });
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isMobileCalendar, setIsMobileCalendar] = useState(false);
   const calendar = content.closing.calendar;
 
   const calendarEvent = useMemo(() => ({
@@ -34,6 +35,19 @@ export function ClosingSection({ content }: ClosingSectionProps) {
   }), [calendar, content.date.isoDate]);
 
   const googleCalendarUrl = useMemo(() => createGoogleCalendarUrl(calendarEvent), [calendarEvent]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px), (pointer: coarse)");
+    const updateMobileCalendar = () => setIsMobileCalendar(mediaQuery.matches);
+    updateMobileCalendar();
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateMobileCalendar);
+      return () => mediaQuery.removeEventListener("change", updateMobileCalendar);
+    }
+    const legacyMediaQuery = mediaQuery as MediaQueryList & { addListener: (listener: () => void) => void; removeListener: (listener: () => void) => void };
+    legacyMediaQuery.addListener(updateMobileCalendar);
+    return () => legacyMediaQuery.removeListener(updateMobileCalendar);
+  }, []);
 
   useEffect(() => {
     if (!calendarOpen) return;
@@ -114,7 +128,7 @@ export function ClosingSection({ content }: ClosingSectionProps) {
             <h3 id="calendar-modal-title">Maria &amp; Sérgio</h3>
             <p className={styles.calendarDate}>{content.closing.date}</p>
             <div className={styles.calendarModalActions}>
-              <a className={["button", styles.calendarPrimaryAction].join(" ")} href={googleCalendarUrl} rel="noreferrer" target="_blank"><Icon name="calendar" size={17} />Google Calendar</a>
+              <a aria-label={isMobileCalendar ? "Abrir no Google Calendar" : "Abrir Google Calendar"} className={["button", styles.calendarPrimaryAction].join(" ")} href={googleCalendarUrl} rel="noreferrer" target={isMobileCalendar ? undefined : "_blank"}><Icon name="calendar" size={17} /><span className={styles.calendarDesktopLabel}>Google Calendar</span><span className={styles.calendarMobileLabel}>Abrir no Google Calendar</span></a>
               <button className={["button", styles.calendarSecondaryAction].join(" ")} onClick={() => { downloadCalendarFile(); setCalendarOpen(false); }} type="button"><Icon name="calendar" size={17} />Baixar .ics</button>
             </div>
           </div>

@@ -153,6 +153,7 @@
 .calendarModalActions { display: grid; gap: 0.75rem; margin-top: 2rem; }
 .calendarPrimaryAction, .calendarSecondaryAction { justify-content: center; }
 .calendarSecondaryAction { border-color: rgb(116 123 85 / 34%); background: transparent; color: var(--color-olive-dark); }
+.calendarMobileLabel { display: none; }
 
 .action {
   min-height: 3.25rem;
@@ -226,4 +227,6 @@
   .botanicalRight { right: -9rem; }
   .calendarBackdrop { align-items: end; padding: 0; }
   .calendarSheet { width: 100%; padding: 2rem var(--gutter) max(2rem, env(safe-area-inset-bottom)); }
+  .calendarDesktopLabel { display: none; }
+  .calendarMobileLabel { display: inline; }
 }
